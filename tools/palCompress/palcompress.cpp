@@ -251,16 +251,16 @@ BestPal truncatePalette(std::vector<unsigned short> input)
     //  Skip first color
     input.erase(input.begin());
     //  Remove blacks from the end
-    while (input[input.size() - 1] == 0 && input.size() > 0)
+    while (input.size() > 0 && input[input.size() - 1] == 0)
         input.erase(input.end() - 1);
     //  Remove duplicates from the beginning
-    while (input[0] == input[1] && input.size() > 1)
+    while (input.size() > 1 && input[0] == input[1])
     {
         retPal.begTrunc++;
         input.erase(input.begin());
     }
     //  Remove duplicates from the end
-    while (input[input.size() - 1] == input[input.size() - 2] && input.size() > 1)
+    while (input.size() > 1 && input[input.size() - 1] == input[input.size() - 2])
     {
         retPal.endTrunc++;
         input.erase(input.end() - 1);
