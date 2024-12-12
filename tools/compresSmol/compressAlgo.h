@@ -108,6 +108,7 @@ struct CompressedImage {
     std::vector<unsigned int> otherBits;
     std::vector<unsigned short> symVec;
     std::vector<unsigned char> loVec;
+    size_t numInstructions;
 };
 
 struct InputSettings {
@@ -154,7 +155,7 @@ std::vector<unsigned int> getFreqWriteInts(std::vector<unsigned char> input);
 std::vector<unsigned int> getNewHeaders(CompressionMode mode, size_t imageSize, size_t symLength, int initialState, size_t bitstreamSize, size_t loLength);
 int findInitialState(EncodeCol encodeCol, unsigned char firstSymbol);
 CompressedImage fillCompressVec(std::vector<unsigned char> loVec, std::vector<unsigned char> symVec, size_t lengthMod, bool loEncoded, bool symEncoded, bool symDelta, size_t byteSize, CompressionMode mode);
-CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector<unsigned short> symVec, CompressionMode mode, size_t imageBytes);
+CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector<unsigned short> symVec, CompressionMode mode, size_t imageBytes, std::vector<ShortCompressionInstruction> instructions);
 std::vector<ShortCompressionInstruction> getShortInstructions(std::vector<ShortCopy> copies, size_t lengthMod);
 std::vector<unsigned char> getLosFromInstructions(std::vector<CompressionInstruction> instructions);
 std::vector<unsigned char> getSymsFromInstructions(std::vector<CompressionInstruction> instructions);
@@ -185,4 +186,6 @@ bool isModeSymDelta(CompressionMode mode);
 
 void deltaEncode(std::vector<unsigned char> *buffer, int length);
 void deltaDecode(std::vector<unsigned char> *buffer, int length);
+
+void decodeCombinedStream(int state, std::vector<unsigned int> bitstream, std::vector<DecodeCol> loTable, std::vector<DecodeCol> symTable, std::vector<unsigned char> *loNibbles, std::vector<unsigned char> *symNibbles, size_t numInstructions);
 #endif

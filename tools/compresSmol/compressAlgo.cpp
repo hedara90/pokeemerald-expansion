@@ -594,7 +594,7 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
               || mode == ENCODE_DELTA_SYMS
               || mode == ENCODE_BOTH_DELTA_SYMS))
                 continue;
-            CompressedImage image = fillCompressVecNew(loVec, symVec, mode,rawBase.size());
+            CompressedImage image = fillCompressVecNew(loVec, symVec, mode,rawBase.size(), shortInstructions);
             if (!verifyCompressionShort(&image, &usBase))
             {
                 compressionFail = true;
@@ -804,24 +804,31 @@ DataVecsNew decodeDataVectorsNew(CompressedImage *pInput)
 
     size_t bitIndex = 0;
     int currState = pInput->initialState;
-    if (loEncoded)
+    if (loEncoded && !symEncoded)
     {
         bitIndex = decodeNibbles(loDecode, &allBits, &currState, &loNibbles, bitIndex, loSize*2);
     }
-    if (loEncoded)
+    if (loEncoded && !symEncoded)
         for (size_t i = 0; i < loVec.size(); i++)
             loVec[i] = loNibbles[2*i] + (loNibbles[2*i + 1] << 4);
 
-    if (symEncoded)
+    if (symEncoded && !loEncoded)
     {
         bitIndex = decodeNibbles(symDecode, &allBits, &currState, &symNibbles, bitIndex, symSize*4);
         if (symDelta)
             deltaDecode(&symNibbles, symNibbles.size());
     }
-    if (symEncoded)
+    if (symEncoded && !loEncoded)
         for (size_t i = 0; i < symVec.size(); i++)
             for (size_t j = 0; j < 4; j++)
                 symVec[i] += (unsigned short)symNibbles[i*4 + j] << (j*4);
+
+    if (symEncoded && loEncoded)
+    {
+        std::vector<unsigned char> loTempNibbles;
+        std::vector<unsigned char> symTempNibbles;
+        decodeCombinedStream(currState, allBits, loDecode, symDecode, &loTempNibbles, &symTempNibbles, pInput->numInstructions);
+    }
 
     DataVecsNew returnData;
     returnData.loVec = loVec;
@@ -1108,7 +1115,7 @@ bool isModeSymDelta(CompressionMode mode)
     return false;
 }
 
-CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector<unsigned short> symVec, CompressionMode mode, size_t imageBytes)
+CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector<unsigned short> symVec, CompressionMode mode, size_t imageBytes, std::vector<ShortCompressionInstruction> instructions)
 {
     CompressedImage image;
     bool loEncoded = isModeLoEncoded(mode);
@@ -1186,7 +1193,7 @@ CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector
     }
     int currState = -1;
     std::vector<unsigned int> bitstream;
-    if (symEncoded)
+    if (symEncoded && !loEncoded)
     {
         std::vector<unsigned char> reversedVec;
         for (size_t i = 0; i < symNibbles.size(); i++)
@@ -1201,7 +1208,7 @@ CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector
         for (size_t i = startIndex; i < reversedVec.size(); i++)
             currState = encodeSingleSymbol(symEncode[currState], reversedVec[i], &bitstream) - TANS_TABLE_SIZE;
     }
-    if (loEncoded)
+    if (loEncoded && !symEncoded)
     {
         std::vector<unsigned char> reversedVec;
         for (size_t i = 0; i < loNibbles.size(); i++)
@@ -1216,6 +1223,93 @@ CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector
         for (size_t i = startIndex; i < reversedVec.size(); i++)
             currState = encodeSingleSymbol(loEncode[currState], reversedVec[i], &bitstream) - TANS_TABLE_SIZE;
     }
+    size_t currInstruction = 0;
+    if (loEncoded && symEncoded)
+    {
+        std::vector<EncodeCol> symEncode = createEncodingTable(symDecode, symbols);
+        std::vector<EncodeCol> loEncode = createEncodingTable(loDecode, symbols);
+        //  Build new vectors to handle the combined data stream
+        std::vector<unsigned char> fullVec;
+        std::vector<std::vector<unsigned char>> loInsVecs;
+        std::vector<std::vector<unsigned char>> symInsVecs;
+        size_t loIndex = 0;
+        size_t symIndex = 0;
+        for (ShortCompressionInstruction instruction : instructions)
+        {
+            if (instruction.offset == 0)
+            {
+                instruction.offset = instruction.length;
+                instruction.length = 0;
+            }
+            std::vector<unsigned char> loTempVec;
+            std::vector<unsigned char> symTempVec;
+            unsigned char loByte1 = instruction.length & 0x7f;
+            unsigned char loByte2 = instruction.length >> 7;
+            if (loByte2 != 0)
+            {
+                loByte1 += 0x80;
+                loTempVec.push_back(loByte1 & 0xf);
+                loTempVec.push_back(loByte1 >> 4);
+                loTempVec.push_back(loByte2 & 0xf);
+                loTempVec.push_back(loByte2 >> 4);
+            }
+            else
+            {
+                loTempVec.push_back(loByte1 & 0xf);
+                loTempVec.push_back(loByte1 >> 4);
+            }
+            unsigned char loByte3 = instruction.offset & 0x7f;
+            unsigned char loByte4 = instruction.offset >> 7;
+            if (loByte4 != 0)
+            {
+                loByte3 += 0x80;
+                loTempVec.push_back(loByte3 & 0xf);
+                loTempVec.push_back(loByte3 >> 4);
+                loTempVec.push_back(loByte4 & 0xf);
+                loTempVec.push_back(loByte4 >> 4);
+            }
+            else
+            {
+                loTempVec.push_back(loByte3 & 0xf);
+                loTempVec.push_back(loByte3 >> 4);
+            }
+            if (instruction.length != 0)
+            {
+                for (size_t i = 0; i < 4; i++)
+                {
+                    symTempVec.push_back(symNibbles[symIndex]);
+                    symIndex++;
+                }
+            }
+            else
+            {
+                for (size_t i = 0; i < 4*instruction.offset; i++)
+                {
+                    symTempVec.push_back(symNibbles[symIndex]);
+                    symIndex++;
+                }
+            }
+            loInsVecs.push_back(loTempVec);
+            symInsVecs.push_back(symTempVec);
+        }
+        for (size_t i = 0; i < loInsVecs.size(); i++)
+        {
+            size_t currOuterIndex = loInsVecs.size() - 1 - i;
+            for (size_t j = 0; j < symInsVecs[currOuterIndex].size(); j++)
+            {
+                size_t currInnerIndex = symInsVecs[currOuterIndex].size() - 1 - j;
+                if (currState == -1)
+                    currState = findInitialState(symEncode[0], symInsVecs[currOuterIndex][currInnerIndex]) - TANS_TABLE_SIZE;
+                currState = encodeSingleSymbol(symEncode[currState], symInsVecs[currOuterIndex][currInnerIndex], &bitstream) - TANS_TABLE_SIZE;
+            }
+            for (size_t j = 0; j < loInsVecs[currOuterIndex].size(); j++)
+            {
+                size_t currInnerIndex = loInsVecs[currOuterIndex].size() - 1 - j;
+                currState = encodeSingleSymbol(loEncode[currState], loInsVecs[currOuterIndex][currInnerIndex], &bitstream) - TANS_TABLE_SIZE;
+            }
+        }
+        currInstruction++;
+    }
     std::vector<unsigned int> reversedBitstream(bitstream.size());
     for (size_t i = 0; i < bitstream.size(); i++)
         reversedBitstream[reversedBitstream.size() - 1 - i] = bitstream[i];
@@ -1224,7 +1318,7 @@ CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector
     int checkState = currState;
 
     size_t currBitIndex = 0;
-    if (loEncoded)
+    if (loEncoded && !symEncoded)
     {
         std::vector<unsigned char> checkLoNibbles(loNibbles.size());
         currBitIndex = decodeNibbles(loDecode, &checkBits, &checkState, &checkLoNibbles, currBitIndex, loNibbles.size());
@@ -1235,7 +1329,7 @@ CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector
                 break;
             }
     }
-    if (symEncoded)
+    if (symEncoded && !loEncoded)
     {
         std::vector<unsigned char> checkSymNibbles(symNibbles.size());
         currBitIndex = decodeNibbles(symDecode, &checkBits, &checkState, &checkSymNibbles, currBitIndex, symNibbles.size());
@@ -1245,6 +1339,24 @@ CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector
                 fprintf(stderr, "Symbol Mismatch\n");
                 break;
             }
+    }
+    if (loEncoded && symEncoded)
+    {
+        std::vector<unsigned char> loNibblesDecoded;
+        std::vector<unsigned char> symNibblesDecoded;
+        decodeCombinedStream(checkState, checkBits, loDecode, symDecode, &loNibblesDecoded, &symNibblesDecoded, instructions.size());
+        if (loNibblesDecoded.size() != loNibbles.size())
+            fprintf(stderr, "Size Mismatch for LOs\n");
+        else
+            for (size_t i = 0; i < loNibbles.size(); i++)
+                if (loNibblesDecoded[i] != loNibbles[i])
+                    fprintf(stderr, "LO Mismatch, Combined\n");
+        if (symNibblesDecoded.size() != symNibbles.size())
+            fprintf(stderr, "Size Mismatch for Symbols\n");
+        else
+            for (size_t i = 0; i < symNibbles.size(); i++)
+                if (symNibblesDecoded[i] != symNibbles[i])
+                    fprintf(stderr, "Symbol Mismatch, Combined\n");
     }
 
     std::vector<unsigned int> tANSbits;
@@ -1265,7 +1377,157 @@ CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector
     image.symVec = symVec;
     image.loVec = loVec;
     image.initialState = currState;
+    image.numInstructions = instructions.size();
     return image;
+}
+
+void decodeCombinedStream(int state, std::vector<unsigned int> bitstream, std::vector<DecodeCol> loTable, std::vector<DecodeCol> symTable, std::vector<unsigned char> *loNibbles, std::vector<unsigned char> *symNibbles, size_t numInstructions)
+{
+    size_t instructionIndex = 0;
+    size_t streamIndex = 0;
+    while (instructionIndex < numInstructions)
+    {
+        size_t currLength = loTable[state].symbol;
+        loNibbles->push_back(loTable[state].symbol);
+        size_t currY = loTable[state].y;
+        size_t currK = loTable[state].k;
+        int nextState = currY << currK;
+        for (size_t i = 0; i < currK; i++)
+        {
+            nextState += bitstream[streamIndex] << i;
+            streamIndex++;
+        }
+        state = nextState - TANS_TABLE_SIZE;
+
+        currLength += loTable[state].symbol << 4;
+        loNibbles->push_back(loTable[state].symbol);
+        currY = loTable[state].y;
+        currK = loTable[state].k;
+        nextState = currY << currK;
+        for (size_t i = 0; i < currK; i++)
+        {
+            nextState += bitstream[streamIndex] << i;
+            streamIndex++;
+        }
+        state = nextState - TANS_TABLE_SIZE;
+        if (currLength & LO_CONTINUE_BIT)
+        {
+            currLength = currLength & 0x7f;
+            size_t tempLength = loTable[state].symbol;
+            loNibbles->push_back(loTable[state].symbol);
+            currY = loTable[state].y;
+            currK = loTable[state].k;
+            nextState = currY << currK;
+            for (size_t i = 0; i < currK; i++)
+            {
+                nextState += bitstream[streamIndex] << i;
+                streamIndex++;
+            }
+            state = nextState - TANS_TABLE_SIZE;
+
+            tempLength += loTable[state].symbol << 4;
+            loNibbles->push_back(loTable[state].symbol);
+            currY = loTable[state].y;
+            currK = loTable[state].k;
+            nextState = currY << currK;
+            for (size_t i = 0; i < currK; i++)
+            {
+                nextState += bitstream[streamIndex] << i;
+                streamIndex++;
+            }
+            state = nextState - TANS_TABLE_SIZE;
+            currLength += tempLength << 7;
+        }
+
+        size_t currOffset = loTable[state].symbol;
+        loNibbles->push_back(loTable[state].symbol);
+        currY = loTable[state].y;
+        currK = loTable[state].k;
+        nextState = currY << currK;
+        for (size_t i = 0; i < currK; i++)
+        {
+            nextState += bitstream[streamIndex] << i;
+            streamIndex++;
+        }
+        state = nextState - TANS_TABLE_SIZE;
+
+        currOffset += loTable[state].symbol << 4;
+        loNibbles->push_back(loTable[state].symbol);
+        currY = loTable[state].y;
+        currK = loTable[state].k;
+        nextState = currY << currK;
+        for (size_t i = 0; i < currK; i++)
+        {
+            nextState += bitstream[streamIndex] << i;
+            streamIndex++;
+        }
+        state = nextState - TANS_TABLE_SIZE;
+        if (currOffset & LO_CONTINUE_BIT)
+        {
+            currOffset = currOffset & 0x7f;
+            size_t tempOffset = loTable[state].symbol;
+            loNibbles->push_back(loTable[state].symbol);
+            currY = loTable[state].y;
+            currK = loTable[state].k;
+            nextState = currY << currK;
+            for (size_t i = 0; i < currK; i++)
+            {
+                nextState += bitstream[streamIndex] << i;
+                streamIndex++;
+            }
+            state = nextState - TANS_TABLE_SIZE;
+
+            tempOffset += loTable[state].symbol << 4;
+            loNibbles->push_back(loTable[state].symbol);
+            currY = loTable[state].y;
+            currK = loTable[state].k;
+            nextState = currY << currK;
+            for (size_t i = 0; i < currK; i++)
+            {
+                nextState += bitstream[streamIndex] << i;
+                streamIndex++;
+            }
+            state = nextState - TANS_TABLE_SIZE;
+            currOffset += tempOffset << 7;
+        }
+        if (currLength != 0)
+        {
+            //size_t fullSymbol = 0;
+            for (size_t i = 0; i < 4; i++)
+            {
+                //fullSymbol += symTable[state].symbol << (4*i);
+                symNibbles->push_back(symTable[state].symbol);
+                currY = symTable[state].y;
+                currK = symTable[state].k;
+                nextState = currY << currK;
+                for (size_t j = 0; j < currK; j++)
+                {
+                    nextState += bitstream[streamIndex] << j;
+                    streamIndex++;
+                }
+                state = nextState - TANS_TABLE_SIZE;
+            }
+        }
+        else
+        {
+            //size_t fullSymbol = 0;
+            for (size_t i = 0; i < 4*currOffset; i++)
+            {
+                //fullSymbol += symTable[state].symbol << (4*i);
+                symNibbles->push_back(symTable[state].symbol);
+                currY = symTable[state].y;
+                currK = symTable[state].k;
+                nextState = currY << currK;
+                for (size_t j = 0; j < currK; j++)
+                {
+                    nextState += bitstream[streamIndex] << j;
+                    streamIndex++;
+                }
+                state = nextState - TANS_TABLE_SIZE;
+            }
+        }
+        instructionIndex++;
+    }
 }
 
 size_t decodeNibbles(std::vector<DecodeCol> decodeTable, std::vector<unsigned int> *bits, int *currState, std::vector<unsigned char> *nibbleVec, size_t currBitIndex, size_t numNibbles)
