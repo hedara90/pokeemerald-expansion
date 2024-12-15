@@ -109,6 +109,7 @@ struct CompressedImage {
     std::vector<unsigned short> symVec;
     std::vector<unsigned char> loVec;
     size_t numInstructions;
+    size_t secondDataOffset;
 };
 
 struct InputSettings {
@@ -152,7 +153,7 @@ bool verifyShortCopies(std::vector<ShortCopy> *pCopies, std::vector<unsigned sho
 
 std::vector<unsigned char> getNormalizedCounts(std::vector<size_t> input);
 std::vector<unsigned int> getFreqWriteInts(std::vector<unsigned char> input);
-std::vector<unsigned int> getNewHeaders(CompressionMode mode, size_t imageSize, size_t symLength, int initialState, size_t bitstreamSize, size_t loLength);
+std::vector<unsigned int> getNewHeaders(CompressionMode mode, size_t imageSize, size_t symLength, int initialState, size_t bitstreamSize, size_t loLength, size_t numInstructions);
 int findInitialState(EncodeCol encodeCol, unsigned char firstSymbol);
 CompressedImage fillCompressVec(std::vector<unsigned char> loVec, std::vector<unsigned char> symVec, size_t lengthMod, bool loEncoded, bool symEncoded, bool symDelta, size_t byteSize, CompressionMode mode);
 CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector<unsigned short> symVec, CompressionMode mode, size_t imageBytes, std::vector<ShortCompressionInstruction> instructions);
@@ -175,7 +176,6 @@ size_t decodeNibbles(std::vector<DecodeCol> decodeTable, std::vector<unsigned in
 bool compareVectorsShort(std::vector<unsigned short> *pVec1, std::vector<unsigned short> *pVec2);
 
 bool verifyCompressionShort(CompressedImage *pInput, std::vector<unsigned short> *pImage);
-bool verifyBytesShort(std::vector<unsigned char> *pLoVec, std::vector<unsigned char> *pSymVec, std::vector<unsigned short> *pImage);
 bool verifyUIntVecShort(std::vector<unsigned int> *pInput, std::vector<unsigned short> *pImage);
 
 std::vector<unsigned short> readRawDataVecs(std::vector<unsigned int> *pInput);
@@ -188,4 +188,6 @@ void deltaEncode(std::vector<unsigned char> *buffer, int length);
 void deltaDecode(std::vector<unsigned char> *buffer, int length);
 
 void decodeCombinedStream(int state, std::vector<unsigned int> bitstream, std::vector<DecodeCol> loTable, std::vector<DecodeCol> symTable, std::vector<unsigned char> *loNibbles, std::vector<unsigned char> *symNibbles, size_t numInstructions);
+bool newVerifyCompression(CompressedImage *pImage, std::vector<unsigned short> *pUsVec);
+unsigned char decodeSingleSymbol(int *state, std::vector<DecodeCol> table, std::vector<unsigned int> *bitstream, size_t *bitIndex);
 #endif

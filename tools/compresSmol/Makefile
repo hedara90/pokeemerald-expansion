@@ -1,5 +1,6 @@
 CXX ?= g++
 
+//CXXFLAGS := -Werror -std=c++17 -pthread -g -o0
 CXXFLAGS := -Werror -std=c++17 -pthread -O2
 
 INCLUDES := -I .
