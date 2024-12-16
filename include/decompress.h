@@ -21,6 +21,7 @@ struct LZ77Header {
     u32 size:24;
 };
 
+/*
 struct SmolHeader {
     u32 mode:5;
     u32 imageSize:12;
@@ -28,6 +29,15 @@ struct SmolHeader {
     u32 initialState:6;
     u32 bitstreamSize:13;
     u32 loSize:13;
+};
+*/
+
+struct SmolHeader {
+    u32 mode:5;
+    u32 initialState:6;
+    u32 imageSize:21;
+    u32 numInstructions:16;
+    u32 secondDataOffset:16;
 };
 
 union CompressionHeader {
@@ -106,5 +116,12 @@ void HandleLoadSpecialPokePic(bool32 isFrontPic, void *dest, s32 species, u32 pe
 void LoadSpecialPokePic(void *dest, s32 species, u32 personality, bool8 isFrontPic);
 
 u32 GetDecompressedDataSize(const u32 *ptr);
+
+void decodeMode0(u32 numInstructions, u8 *pLoVec, u16 *pSymVec, void *dest);
+void decodeMode1(u32 numInstructions, u8 *pLoVec, void *dest);
+void decodeMode2(u32 numInstructions, u8 *pLoVec, void *dest);
+void decodeMode3(u32 numInstructions, u16 *pSymVec, void *dest);
+void decodeMode4(u32 numInstructions, void *dest);
+void decodeMode5(u32 numInstructions, void *dest);
 
 #endif // GUARD_DECOMPRESS_H

@@ -89,6 +89,14 @@ struct SortedShortElement {
     SortedShortElement(size_t index, ShortCopy copy);
 };
 
+struct HeaderData {
+    CompressionMode mode;
+    int initialState;
+    size_t imageSize;
+    size_t numInstructions;
+    size_t dataOffset;
+};
+
 struct CompressedImage {
     std::string fileName;
     CompressionMode mode;
@@ -162,7 +170,7 @@ std::vector<unsigned char> getLosFromInstructions(std::vector<CompressionInstruc
 std::vector<unsigned char> getSymsFromInstructions(std::vector<CompressionInstruction> instructions);
 std::vector<unsigned char> getLosFromInstructions(std::vector<ShortCompressionInstruction> instructions);
 std::vector<unsigned short> getSymsFromInstructions(std::vector<ShortCompressionInstruction> instructions);
-std::vector<int> unpackFrequencies(unsigned int pInts[3]);
+std::vector<unsigned int> unpackFrequencies(unsigned int pack1, unsigned int pack2, unsigned int pack3);
 CompressedImage getDataFromUIntVec(std::vector<unsigned int> *pInput);
 CompressedImage readNewHeader(std::vector<unsigned int> *pInput);
 std::vector<unsigned int> getUIntVecFromData(CompressedImage *pImage);
@@ -190,4 +198,9 @@ void deltaDecode(std::vector<unsigned char> *buffer, int length);
 void decodeCombinedStream(int state, std::vector<unsigned int> bitstream, std::vector<DecodeCol> loTable, std::vector<DecodeCol> symTable, std::vector<unsigned char> *loNibbles, std::vector<unsigned char> *symNibbles, size_t numInstructions);
 bool newVerifyCompression(CompressedImage *pImage, std::vector<unsigned short> *pUsVec);
 unsigned char decodeSingleSymbol(int *state, std::vector<DecodeCol> table, std::vector<unsigned int> *bitstream, size_t *bitIndex);
+std::vector<unsigned short> readRawDataVecsNew(std::vector<unsigned int> input);
+
+HeaderData getHeaderStruct(std::vector<unsigned int> *pInput);
+
+std::vector<DecodeCol> buildDecodeTable(unsigned int pack1, unsigned int pack2, unsigned int pack3);
 #endif

@@ -332,6 +332,8 @@ void BuildDecompressionTable(const u32 *packedFreqs, struct DecodeYK *table, u32
 static EWRAM_DATA u8 sBitIndex = 0;
 static EWRAM_DATA u32 sReadIndex = 0;
 static EWRAM_DATA u32 sCurrState = 0;
+static EWRAM_DATA u16 *sSymPointer;
+static EWRAM_DATA u8 *sLoPointer;
 // Order of allocated memory- ykTable, symbolTable(these go first, because are always aligned), symSize, loSize(last, because not aligned)
 static EWRAM_DATA void *sMemoryAllocated;
 
@@ -555,11 +557,12 @@ static inline void Fill16(u16 value, void *_dst, u32 size)
     }
 }
 
-__attribute__((target("arm"))) __attribute__((noinline)) void DecodeInstructions(u32 headerLoSize, u8 *loVec, u16 *symVec, void *dest)
+__attribute__((target("arm"))) __attribute__((noinline)) void DecodeInstructions(u32 numInstructions, u8 *loVec, u16 *symVec, void *dest)
 {
     u32 loIndex = 0;
     u32 symIndex = 0;
-    while (loIndex < headerLoSize)
+    u32 insCount = 0;
+    while (insCount < numInstructions)
     {
         u32 currLength = loVec[loIndex] & FIRST_LO_MASK;
         if (loVec[loIndex] & CONTINUE_BIT)
@@ -620,25 +623,36 @@ void DecodeInstructionsIwram(u32 headerLoSize, u8 *loVec, u16 *symVec, void *des
     SwitchToArmCallDecodeInstructions(headerLoSize, loVec, symVec, dest, (void *) funcBuffer);
 }
 
+void decodeMode0(u32 numInstructions, u8 *pLoVec, u16 *pSymVec, void *dest)
+{
+    DecodeInstructionsIwram(numInstructions, pLoVec, pSymVec, dest);
+}
+
 void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *dest)
 {
     //  This is apparently needed due to Game Freak sending bullshit down the decompression pipeline
-    if (header->loSize == 0 || header->symSize == 0)
+    if (header->numInstructions == 0)
         return;
-    u8 *leftoverPos = (u8 *)data;
+    //u8 *leftoverPos = (u8 *)data;
 
     sCurrState = header->initialState;
     // Allocate also for ykTable and symbolTable
-    u32 headerLoSize = header->loSize;
-    u32 headerSymSize = header->symSize;
-    u32 alignedLoSize = header->loSize % 2 == 1 ? headerLoSize + 1 : headerLoSize;
+    //u32 headerLoSize = header->loSize;
+    //u32 headerSymSize = header->symSize;
+    //u32 alignedLoSize = header->loSize % 2 == 1 ? headerLoSize + 1 : headerLoSize;
     // LoSize HAS TO go last, because it is NOT aligned
-    sMemoryAllocated = Alloc((TANS_TABLE_SIZE*sizeof(struct DecodeYK) + (TANS_TABLE_SIZE * 4)) + (headerSymSize*2) + alignedLoSize);
-    u16 *symVec = sMemoryAllocated + (TANS_TABLE_SIZE*sizeof(struct DecodeYK) + (TANS_TABLE_SIZE * 4));
-    u8 *loVec = sMemoryAllocated + (TANS_TABLE_SIZE*sizeof(struct DecodeYK) + (TANS_TABLE_SIZE * 4)) + headerSymSize*2;
     bool32 loEncoded = isModeLoEncoded(header->mode);
     bool32 symEncoded = isModeSymEncoded(header->mode);
-    bool32 symDelta = isModeSymDelta(header->mode);
+    //bool32 symDelta = isModeSymDelta(header->mode);
+    u32 allocSize = 0;
+    if (loEncoded)
+        allocSize += TANS_TABLE_SIZE*(sizeof(struct DecodeYK) + 4);
+    if (symEncoded)
+        allocSize += TANS_TABLE_SIZE*(sizeof(struct DecodeYK) + 4);
+    //  With combined stream we don't allocate loVec and symVec, they're read from ROM
+    sMemoryAllocated = Alloc(allocSize);
+    //u16 *symVec = sMemoryAllocated + (TANS_TABLE_SIZE*sizeof(struct DecodeYK) + (TANS_TABLE_SIZE * 4));
+    //u8 *loVec = sMemoryAllocated + (TANS_TABLE_SIZE*sizeof(struct DecodeYK) + (TANS_TABLE_SIZE * 4)) + headerSymSize*2;
 
     const u32 *pLoFreqs;
     const u32 *pSymFreqs;
@@ -646,14 +660,20 @@ void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *
     sReadIndex = 0;
     switch (header->mode)
     {
+        case BASE_ONLY:
+            sSymPointer = (u16 *)(&data[sReadIndex]);
+            sLoPointer = (u8 *)(&data[sReadIndex]) + 2*header->secondDataOffset;
+            break;
         case ENCODE_LO:
             pLoFreqs = &data[sReadIndex];
             sReadIndex += 3;
+            sSymPointer = (u16 *)(&data[sReadIndex]) + header->secondDataOffset;
             break;
         case ENCODE_DELTA_SYMS:
         case ENCODE_SYMS:
             pSymFreqs = &data[sReadIndex];
             sReadIndex += 3;
+            sLoPointer = (u8 *)(&data[sReadIndex]) + 2*header->secondDataOffset;
             break;
         case ENCODE_BOTH:
         case ENCODE_BOTH_DELTA_SYMS:
@@ -664,6 +684,7 @@ void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *
     }
 
     sBitIndex = 0;
+    /*
     if (loEncoded)
     {
         DecodeLOtANS(data, pLoFreqs, loVec, headerLoSize);
@@ -693,6 +714,7 @@ void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *
     }
 
     DecodeInstructionsIwram(headerLoSize, loVec, symVec, dest);
+    */
 
     Free(sMemoryAllocated);
 }

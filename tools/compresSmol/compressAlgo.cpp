@@ -534,7 +534,7 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
     std::vector<unsigned char> bestLO;
     std::vector<unsigned short> bestSym;
     std::vector<ShortCompressionInstruction> bestInstructions;
-    for (size_t minCodeLength = 2; minCodeLength <= 2; minCodeLength++)
+    for (size_t minCodeLength = 2; minCodeLength <= 15; minCodeLength++)
     {
         std::vector<ShortCopy> shortCopies = getShortCopies(usBase, minCodeLength);
         if (!verifyShortCopies(&shortCopies, &usBase))
@@ -575,6 +575,7 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
                 settings.canEncodeSyms = true;
             }
         }
+        modesToUse = {ENCODE_BOTH};
 
         for (CompressionMode currMode : modesToUse)
         {
@@ -595,6 +596,7 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
               || mode == ENCODE_BOTH_DELTA_SYMS))
                 continue;
             CompressedImage image = fillCompressVecNew(loVec, symVec, mode,rawBase.size(), shortInstructions);
+            printf("Compress done\n");
             image.loVec = loVec;
             image.symVec = symVec;
             if (!newVerifyCompression(&image, &usBase))
@@ -602,14 +604,20 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
                 compressionFail = true;
                 continue;
             }
+            /*
+            printf("Verify done\n");
             std::vector<unsigned int> uiVec = getUIntVecFromData(&image);
-            std::vector<unsigned short> decodedImage = readRawDataVecs(&uiVec);
+            printf("UInt done\n");
+            //std::vector<unsigned short> decodedImage = readRawDataVecs(&uiVec);
+            std::vector<unsigned short> decodedImage = readRawDataVecsNew(&uiVec);
+            printf("Done stuff\n");
             if (!compareVectorsShort(&decodedImage, &usBase))
             {
                 uIntConversionFail = true;
                 continue;
             }
-            image.compressedSize = uiVec.size() * 4;
+            */
+            image.compressedSize = image.writeVec.size() * 4;
             if (!hasImage)
             {
                 bestLO = loVec;
@@ -739,8 +747,8 @@ DataVecsNew decodeDataVectorsNew(CompressedImage *pInput)
     bool loEncoded = isModeLoEncoded(mode);
     bool symEncoded = isModeSymEncoded(mode);
     bool symDelta = isModeSymDelta(mode);
-    std::vector<int> loFreqs = unpackFrequencies(&pInput->loFreqs[0]);
-    std::vector<int> symFreqs = unpackFrequencies(&pInput->symFreqs[0]);
+    std::vector<unsigned int> loFreqs = unpackFrequencies(pInput->loFreqs[0], pInput->loFreqs[1], pInput->loFreqs[2]);
+    std::vector<unsigned int> symFreqs = unpackFrequencies(pInput->symFreqs[0], pInput->symFreqs[1], pInput->symFreqs[2]);
     std::vector<unsigned char> symbols = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
     std::vector<DecodeCol> loDecode(TANS_TABLE_SIZE);
     std::vector<DecodeCol> symDecode(TANS_TABLE_SIZE);
@@ -924,18 +932,19 @@ std::vector<unsigned int> getFreqWriteInts(std::vector<unsigned char> input)
     return returnVec;
 }
 
-std::vector<int> unpackFrequencies(unsigned int pInts[3])
+std::vector<unsigned int> unpackFrequencies(unsigned int pack1, unsigned int pack2, unsigned int pack3)
 {
-    std::vector<int> returnVec;
+    std::vector<unsigned int> returnVec;
+    std::vector<unsigned int> input = {pack1, pack2, pack3};
     int freq15 = 0;
     for (size_t i = 0; i < 3; i++)
     {
         for (size_t j = 0; j < 5; j++)
         {
-            int currVal = (pInts[i] >> (6*j)) & 0x3f;
+            int currVal = (input[i] >> (6*j)) & 0x3f;
             returnVec.push_back(currVal);
         }
-        freq15 += ((pInts[i] >> 30) & 0x3) << (2*i);
+        freq15 += ((input[i] >> 30) & 0x3) << (2*i);
     }
     returnVec.push_back(freq15);
     return returnVec;
@@ -1012,6 +1021,17 @@ std::vector<unsigned int> getNewHeaders(CompressionMode mode, size_t imageSize, 
     */
 
     return returnVec;
+}
+
+HeaderData getHeaderStruct(std::vector<unsigned int> *pInput)
+{
+    HeaderData header;
+    header.mode = (CompressionMode)((*pInput)[0] & MODE_MASK);
+    header.initialState = ((*pInput)[0] >> 5) & 0x3f;
+    header.imageSize = (*pInput)[0] >> 11;
+    header.numInstructions = (*pInput)[1] & 0xffff;
+    header.dataOffset = (*pInput)[1] >> 16;
+    return header;
 }
 
 CompressedImage readNewHeader(std::vector<unsigned int> *pInput)
@@ -1465,6 +1485,58 @@ CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector
     image.loVec = loVec;
     image.initialState = currState;
     image.numInstructions = instructions.size();
+    image.writeVec.push_back(image.headers[0]);
+    image.writeVec.push_back(image.headers[1]);
+    if (loEncoded)
+    {
+        for (size_t i = 0; i < 3; i++)
+            image.writeVec.push_back(image.loFreqs[i]);
+    }
+    if (symEncoded)
+    {
+        for (size_t i = 0; i < 3; i++)
+            image.writeVec.push_back(image.symFreqs[i]);
+    }
+    if (loEncoded || symEncoded)
+    {
+        for (unsigned int ui : image.tANSbits)
+            image.writeVec.push_back(ui);
+    }
+    unsigned int currInt = 0;
+    bool containsData = false;
+    size_t currOffset = 0;
+    if (!symEncoded)
+    {
+        for (unsigned short us : symVec)
+        {
+            containsData = true;
+            currInt += us << currOffset;
+            currOffset += 16;
+            if (currOffset == 32)
+            {
+                image.writeVec.push_back(currInt);
+                currOffset = 0;
+                containsData = false;
+            }
+        }
+    }
+    if (!loEncoded)
+    {
+        for (unsigned char uc : loVec)
+        {
+            containsData = true;
+            currInt += us << currOffset;
+            currOffset += 8;
+            if (currOffset == 32)
+            {
+                image.writeVec.push_back(currInt);
+                currOffset = 0;
+                containsData = false;
+            }
+        }
+    }
+    if (containsData)
+        image.writeVec.push_back(currInt);
     return image;
 }
 
@@ -1634,9 +1706,21 @@ size_t decodeNibbles(std::vector<DecodeCol> decodeTable, std::vector<unsigned in
     return currBitIndex;
 }
 
+std::vector<unsigned short> readRawDataVecsNew(std::vector<unsigned int> input)
+{
+    HeaderData header = &input;
+    CompressionMode mode = headerValues.mode;
+    size_t secondDataOffset = headerValues.secondDataOffset;
+    size_t numInstructions = headerValues.numInstructions;
+    bool loEncoded = isModeLoEncoded(mode);
+    bool symEncoded = isModeSymEncoded(mode);
+    bool symDelta = isModeSymDelta(mode);
+}
+
 std::vector<unsigned short> readRawDataVecs(std::vector<unsigned int> *pInput)
 {
     std::vector<unsigned short> imageVec;
+    /*
     CompressedImage readImage = readNewHeader(pInput);
     bool loEncoded = isModeLoEncoded(readImage.mode);
     bool symEncoded = isModeSymEncoded(readImage.mode);
@@ -1653,10 +1737,11 @@ std::vector<unsigned short> readRawDataVecs(std::vector<unsigned int> *pInput)
     size_t numInstructions = readImage.numInstructions;
     if (loEncoded)
     {
+        printf("Building LO table\n");
         for (size_t i = 0; i < 3; i++)
             readImage.loFreqs[i] = (*pInput)[readIndex + i];
         readIndex += 3;
-        std::vector<int> loFreqs = unpackFrequencies(&readImage.loFreqs[0]);
+        std::vector<int> loFreqs = unpackFrequencies(readImage.loFreqs[0], readImage.loFreqs[1], readImage.loFreqs[2]);
         size_t currCol = 0;
         for (size_t i = 0; i < 16; i++)
         {
@@ -1675,6 +1760,7 @@ std::vector<unsigned short> readRawDataVecs(std::vector<unsigned int> *pInput)
     }
     if (symEncoded)
     {
+        printf("Building Sym table\n");
         for (size_t i = 0; i < 3; i++)
             readImage.symFreqs[i] = (*pInput)[readIndex + i];
         readIndex += 3;
@@ -1695,26 +1781,6 @@ std::vector<unsigned short> readRawDataVecs(std::vector<unsigned int> *pInput)
             }
         }
     }
-    /*
-    if (loEncoded || symEncoded)
-    {
-        tANSbits.resize(readImage.bitreamSize);
-        for (size_t i = 0; i < readImage.bitreamSize; i++)
-            tANSbits[i] = (*pInput)[readIndex + i];
-        readIndex += readImage.bitreamSize;
-        allBits.resize(tANSbits.size()*32);
-        size_t currIndex = 0;
-        for (unsigned int ui : tANSbits)
-        {
-            for (size_t i = 0; i < 32; i++)
-            {
-                unsigned int currVal = (ui >> i) & 0x1;
-                allBits[currIndex] = currVal;
-                currIndex++;
-            }
-        }
-    }
-    */
     if (loEncoded && !symEncoded)
     {
         //  Decode X instructions from the bitstream and read symbols from 2ndOffset
@@ -1928,6 +1994,7 @@ std::vector<unsigned short> readRawDataVecs(std::vector<unsigned int> *pInput)
     }
     if (loEncoded && symEncoded)
     {
+        printf("Doing full thing\n");
         std::vector<unsigned int> bitstream;
         std::vector<unsigned char> loNibbles;
         std::vector<unsigned char> symNibbles;
@@ -1949,6 +2016,7 @@ std::vector<unsigned short> readRawDataVecs(std::vector<unsigned int> *pInput)
         if (symDelta)
         {
             deltaDecode(&symNibbles, symNibbles.size());
+            printf("stuff\n");
         }
         for (size_t i = 0; i < symNibbles.size()/4; i++)
         {
@@ -1961,14 +2029,6 @@ std::vector<unsigned short> readRawDataVecs(std::vector<unsigned int> *pInput)
     }
     if (!loEncoded && !symEncoded)
     {
-        /*
-        std::vector<unsigned short> symVec(secondDataOffset);
-        memcpy(symVec.data, &(*pInput)[readIndex*4], secondDataOffset*2);
-        */
-        for (unsigned int ui : *pInput)
-        {
-            //printf("%3u %3u %3u %3u\n", ui & 0xff, (ui >> 8) & 0xff, (ui >> 16) & 0xff, (ui >> 24) & 0xff);
-        }
         std::vector<unsigned short> shortData(pInput->size()*2 - 4);
         std::vector<unsigned char> charData;
         memcpy(shortData.data(), &(*pInput)[2], pInput->size()*4 - 8);
@@ -2017,56 +2077,10 @@ std::vector<unsigned short> readRawDataVecs(std::vector<unsigned int> *pInput)
             }
         }
     }
-    /*
-    bool leftOverValues = false;
-    if (!symEncoded)
-    {
-        for (size_t i = 0; i < readImage.symSize; i++)
-        {
-            symVec[i] = ((*pInput)[readIndex] >> (16*(i%2))) & 0xffff;
-            if ((i+1) % 2 == 0)
-            u{
-                readIndex++;
-                leftOverValues = false;
-            }
-            else
-            {
-                leftOverValues = true;
-            }
-        }
-    }
-    if (!loEncoded)
-    {
-        size_t offsetMod = 0;
-        if (leftOverValues)
-            offsetMod = 2;
-        for (size_t i = 0; i < readImage.loSize; i++)
-        {
-            loVec[i] = ((*pInput)[readIndex] >> (8*((i%4) + offsetMod))) & 0xff;
-            if ((i+offsetMod+1) % 4 == 0)
-                readIndex++;
-        }
-    }
-    size_t bitIndex = 0;
-    if (loEncoded)
-    {
-        std::vector<unsigned char> loNibbles(readImage.loSize*2);
-        bitIndex = decodeNibbles(loDecode, &allBits, &currState, &loNibbles, bitIndex, readImage.loSize*2);
-        for (size_t i = 0; i < readImage.loSize; i++)
-            loVec[i] = loNibbles[2*i] + (loNibbles[2*i + 1] << 4);
-    }
-    if (symEncoded)
-    {
-        std::vector<unsigned char> symNibbles(readImage.symSize*4);
-        bitIndex = decodeNibbles(symDecode, &allBits, &currState, &symNibbles, bitIndex, readImage.symSize*4);
-        if (symDelta)
-            deltaDecode(&symNibbles, symNibbles.size());
-        for (size_t i = 0; i < readImage.symSize; i++)
-            for (size_t j = 0; j < 4; j++)
-                symVec[i] += (unsigned short)symNibbles[i*4 + j] << (4*j);
-    }
-    */
+    printf("Decoding bytes\n");
     imageVec = decodeBytesShort(&loVec, &symVec);
+    printf("Done decoding\n");
+    */
     return imageVec;
 }
 
@@ -2101,8 +2115,8 @@ bool newVerifyCompression(CompressedImage *pImage, std::vector<unsigned short> *
     bool loEncoded = isModeLoEncoded(mode);
     bool symEncoded = isModeSymEncoded(mode);
     bool symDelta = isModeSymDelta(mode);
-    std::vector<int> loFreqs = unpackFrequencies(&pImage->loFreqs[0]);
-    std::vector<int> symFreqs = unpackFrequencies(&pImage->symFreqs[0]);
+    std::vector<unsigned int> loFreqs = unpackFrequencies(pImage->loFreqs[0], pImage->loFreqs[1], pImage->loFreqs[2]);
+    std::vector<unsigned int> symFreqs = unpackFrequencies(pImage->symFreqs[0], pImage->symFreqs[1], pImage->symFreqs[2]);
     std::vector<unsigned char> symbols = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
     std::vector<DecodeCol> loDecode(TANS_TABLE_SIZE);
     std::vector<DecodeCol> symDecode(TANS_TABLE_SIZE);
@@ -2311,4 +2325,28 @@ unsigned char decodeSingleSymbol(int *state, std::vector<DecodeCol> table, std::
     }
     *state = nextState - TANS_TABLE_SIZE;
     return symbol;
+}
+
+std::vector<DecodeCol> buildDecodeTable(unsigned int pack1, unsigned int pack2, unsigned int pack3)
+{
+    std::vector<DecodeCol> table(TANS_TABLE_SIZE);
+    unsigned int packedInts[3] = {pack1, pack2, pack3};
+    std::vector<unsigned int> packedFreqs = {pack1, pack2, pack3};
+    std::vector<unsigned int> freqs = unpackFrequencies(pack1, pack2, pack3);
+    size_t currCol = 0;
+    for (size_t i = 0; i < 16; i++)
+    {
+        for (size_t j = 0; j < freqs[i]; j++)
+        {
+            table[currCol].state = TANS_TABLE_SIZE + currCol;
+            table[currCol].symbol = i;
+            table[currCol].y = freqs[i] + j;
+            size_t currK = 0;
+            while (((freqs[i] + j) << currK) < TANS_TABLE_SIZE)
+                currK++;
+            table[currCol].k = currK;
+            currCol++;
+        }
+    }
+    return table;
 }
