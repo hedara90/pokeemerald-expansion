@@ -534,7 +534,7 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
     std::vector<unsigned char> bestLO;
     std::vector<unsigned short> bestSym;
     std::vector<ShortCompressionInstruction> bestInstructions;
-    for (size_t minCodeLength = 2; minCodeLength <= 15; minCodeLength++)
+    for (size_t minCodeLength = 2; minCodeLength <= 2; minCodeLength++)
     {
         std::vector<ShortCopy> shortCopies = getShortCopies(usBase, minCodeLength);
         if (!verifyShortCopies(&shortCopies, &usBase))
@@ -1048,10 +1048,59 @@ InputSettings::InputSettings(bool canEncodeLO, bool canEncodeSyms, bool canDelta
 
 std::vector<unsigned int> getUIntVecFromData(CompressedImage *pImage)
 {
-    CompressedImage otherImage = readNewHeader(&pImage->headers);
     std::vector<unsigned int> returnVec;
+    CompressionMode mode = pImage->mode;
     returnVec.push_back(pImage->headers[0]);
     returnVec.push_back(pImage->headers[1]);
+    bool loEncoded = isModeLoEncoded(mode);
+    bool symEncoded = isModeSymEncoded(mode);
+    if (loEncoded)
+        for (size_t i = 0; i < 3; i++)
+            returnVec.push_back(pImage->loFreqs[i]);
+    if (symEncoded)
+        for (size_t i = 0; i < 3; i++)
+            returnVec.push_back(pImage->symFreqs[i]);
+    if (loEncoded || symEncoded)
+        for (unsigned int currBits : pImage->tANSbits)
+            returnVec.push_back(currBits);
+    unsigned int currInt = 0;
+    size_t currOffset = 0;
+    bool containsData = false;
+    if (!symEncoded)
+    {
+        for (size_t i = 0; i < pImage->symVec.size(); i++)
+        {
+            containsData = true;
+            currInt += pImage->symVec[i] << currOffset;
+            currOffset += 16;
+            if (currOffset == 32)
+            {
+                returnVec.push_back(currInt);
+                currInt = 0;
+                currOffset = 0;
+                containsData = false;
+            }
+        }
+    }
+    if (!loEncoded)
+    {
+        for (size_t i = 0; i < pImage->loVec.size(); i++)
+        {
+            containsData = true;
+            currInt += (unsigned int)pImage->loVec[i] << currOffset;
+            currOffset += 8;
+            if (currOffset == 32)
+            {
+                returnVec.push_back(currInt);
+                currInt = 0;
+                currOffset = 0;
+                containsData = false;
+            }
+        }
+    }
+    if (containsData)
+        returnVec.push_back(currInt);
+    /*
     if (isModeLoEncoded(otherImage.mode))
         for (size_t i = 0; i < 3; i++)
             returnVec.push_back(pImage->loFreqs[i]);
@@ -1092,6 +1141,7 @@ std::vector<unsigned int> getUIntVecFromData(CompressedImage *pImage)
     }
     if (currOffset != 0)
         returnVec.push_back(currInt);
+    */
     return returnVec;
 }
 
@@ -1915,14 +1965,21 @@ std::vector<unsigned short> readRawDataVecs(std::vector<unsigned int> *pInput)
         std::vector<unsigned short> symVec(secondDataOffset);
         memcpy(symVec.data, &(*pInput)[readIndex*4], secondDataOffset*2);
         */
-        std::vector<unsigned short> symVec;
-        std::vector<unsigned char> loVec;
-        std::vector<unsigned short> shortData(pInput->size()*2);
-        std::vector<unsigned char> charData(pInput->size()*4);
-        memcpy(shortData.data(), pInput->data(), pInput->size()*4);
-        memcpy(charData.data(), pInput->data(), pInput->size()*4);
-        size_t symIndex = 4;
-        size_t loIndex = 8 + 2*secondDataOffset;
+        for (unsigned int ui : *pInput)
+        {
+            //printf("%3u %3u %3u %3u\n", ui & 0xff, (ui >> 8) & 0xff, (ui >> 16) & 0xff, (ui >> 24) & 0xff);
+        }
+        std::vector<unsigned short> shortData(pInput->size()*2 - 4);
+        std::vector<unsigned char> charData;
+        memcpy(shortData.data(), &(*pInput)[2], pInput->size()*4 - 8);
+        for (size_t i = secondDataOffset; i < shortData.size(); i++)
+        {
+            unsigned short currShort = shortData[i];
+            charData.push_back(currShort & 0xff);
+            charData.push_back(currShort >> 8);
+        }
+        size_t symIndex = 0;
+        size_t loIndex = 0;
         for (size_t i = 0; i < numInstructions; i++)
         {
             size_t currLength = charData[loIndex];
@@ -1968,7 +2025,7 @@ std::vector<unsigned short> readRawDataVecs(std::vector<unsigned int> *pInput)
         {
             symVec[i] = ((*pInput)[readIndex] >> (16*(i%2))) & 0xffff;
             if ((i+1) % 2 == 0)
-            {
+            u{
                 readIndex++;
                 leftOverValues = false;
             }
