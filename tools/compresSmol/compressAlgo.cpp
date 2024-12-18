@@ -575,7 +575,6 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
                 settings.canEncodeSyms = true;
             }
         }
-        modesToUse = {ENCODE_BOTH};
 
         for (CompressionMode currMode : modesToUse)
         {
