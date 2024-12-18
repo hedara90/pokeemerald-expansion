@@ -596,7 +596,6 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
               || mode == ENCODE_BOTH_DELTA_SYMS))
                 continue;
             CompressedImage image = fillCompressVecNew(loVec, symVec, mode,rawBase.size(), shortInstructions);
-            printf("Compress done\n");
             image.loVec = loVec;
             image.symVec = symVec;
             if (!newVerifyCompression(&image, &usBase))
@@ -625,7 +624,6 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
                 bestInstructions = shortInstructions;
                 bestImage = image;
                 hasImage = true;
-                bestImage.writeVec = uiVec;
                 someMode = mode;
             }
             else if (image.compressedSize < bestImage.compressedSize)
@@ -635,7 +633,6 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
                 bestInstructions = shortInstructions;
                 bestImage = image;
                 hasImage = true;
-                bestImage.writeVec = uiVec;
                 someMode = mode;
             }
         }
@@ -1502,7 +1499,7 @@ CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector
         for (unsigned int ui : image.tANSbits)
             image.writeVec.push_back(ui);
     }
-    unsigned int currInt = 0;
+    currInt = 0;
     bool containsData = false;
     size_t currOffset = 0;
     if (!symEncoded)
@@ -1525,7 +1522,7 @@ CompressedImage fillCompressVecNew(std::vector<unsigned char> loVec, std::vector
         for (unsigned char uc : loVec)
         {
             containsData = true;
-            currInt += us << currOffset;
+            currInt += uc << currOffset;
             currOffset += 8;
             if (currOffset == 32)
             {
@@ -1708,13 +1705,139 @@ size_t decodeNibbles(std::vector<DecodeCol> decodeTable, std::vector<unsigned in
 
 std::vector<unsigned short> readRawDataVecsNew(std::vector<unsigned int> input)
 {
-    HeaderData header = &input;
+    HeaderData headerValues = getHeaderStruct(&input);
     CompressionMode mode = headerValues.mode;
-    size_t secondDataOffset = headerValues.secondDataOffset;
+    size_t secondDataOffset = headerValues.dataOffset;
     size_t numInstructions = headerValues.numInstructions;
+    int initialState = headerValues.initialState;
     bool loEncoded = isModeLoEncoded(mode);
     bool symEncoded = isModeSymEncoded(mode);
     bool symDelta = isModeSymDelta(mode);
+    size_t readIndex = 2;
+    std::vector<DecodeCol> loDecode;
+    std::vector<DecodeCol> symDecode;
+    if (loEncoded)
+    {
+        loDecode = buildDecodeTable(input[readIndex], input[readIndex + 1], input[readIndex+ 2]);
+        readIndex += 3;
+    }
+    if (symEncoded)
+    {
+        symDecode = buildDecodeTable(input[readIndex], input[readIndex + 1], input[readIndex+ 2]);
+        readIndex += 3;
+    }
+    std::vector<unsigned int> bitstream;
+    if (loEncoded || symEncoded)
+    {
+        for (size_t i = readIndex; i < input.size(); i++)
+        {
+            unsigned int currInt = input[i];
+            for (size_t j = 0; j < 32; j++)
+                bitstream.push_back((currInt >> j) & 0x1);
+        }
+    }
+    std::vector<unsigned short> symVec;
+    std::vector<unsigned short> shortVec;
+    std::vector<unsigned char> loVec;
+    if (!loEncoded || !symEncoded)
+    {
+        for (size_t i = readIndex; i < input.size(); i++)
+        {
+            shortVec.push_back(input[i] & 0xffff);
+            shortVec.push_back(input[i] >> 16);
+        }
+        if (!loEncoded)
+        {
+            for (size_t i = secondDataOffset; i < shortVec.size(); i++)
+            {
+                loVec.push_back(shortVec[i] & 0xff);
+                loVec.push_back(shortVec[i] >> 8);
+            }
+        }
+        if (!symEncoded && loEncoded)
+        {
+            for (size_t i = secondDataOffset; i < shortVec.size(); i++)
+                symVec.push_back(shortVec[i]);
+        }
+        if (!loEncoded && !symEncoded)
+        {
+            for (size_t i = 0; i < secondDataOffset; i++)
+                symVec.push_back(shortVec[i]);
+        }
+    }
+    if (symEncoded && loEncoded)
+    {
+        std::vector<unsigned char> loNibbles;
+        std::vector<unsigned char> symNibbles;
+        decodeCombinedStream(initialState, bitstream, loDecode, symDecode, &loNibbles, &symNibbles, numInstructions);
+        if (symDelta)
+            deltaDecode(&symNibbles, symNibbles.size());
+        for (size_t i = 0; i < loNibbles.size(); i += 2)
+        {
+            unsigned char tempLO = loNibbles[i] + (loNibbles[i + 1] << 4);
+            loVec.push_back(tempLO);
+        }
+        for (size_t i = 0; i < symNibbles.size(); i += 4)
+        {
+            unsigned short tempSym = symNibbles[i];
+            tempSym += ((unsigned short)symNibbles[i + 1]) << 4;
+            tempSym += ((unsigned short)symNibbles[i + 2]) << 8;
+            tempSym += ((unsigned short)symNibbles[i + 3]) << 12;
+            symVec.push_back(tempSym);
+        }
+    }
+    if (symEncoded && !loEncoded)
+    {
+        size_t symbolCount = 0;
+        size_t loIndex = 0;
+        for (size_t i = 0; i < numInstructions; i++)
+        {
+            size_t currLength = 0;
+            size_t currOffset = 0;
+            currLength = loVec[loIndex];
+            loIndex++;
+            if (currLength & LO_CONTINUE_BIT)
+            {
+                currLength -= LO_CONTINUE_BIT;
+                currLength += loVec[loIndex];
+                loIndex++;
+            }
+            currOffset = loVec[loIndex];
+            loIndex++;
+            if (currOffset & LO_CONTINUE_BIT)
+            {
+                currOffset -= LO_CONTINUE_BIT;
+                currOffset += loVec[loIndex];
+                loIndex++;
+            }
+            if (currLength != 0)
+                symbolCount++;
+            else
+                symbolCount += currOffset;
+        }
+        std::vector<unsigned char> symNibbles;
+        size_t bitIndex = 0;
+        for (size_t i = 0; i < symbolCount*4; i++)
+            symNibbles.push_back(decodeSingleSymbol(&initialState, loDecode, &bitstream, &bitIndex));
+        if (symDelta)
+            deltaDecode(&symNibbles, symNibbles.size());
+        for (size_t i = 0; i < symbolCount; i += 4)
+            symVec.push_back((unsigned short)(symNibbles[i]) + ((unsigned short)symNibbles[i + 1]) << 4 + ((unsigned short)symNibbles[i + 2]) << 8 + ((unsigned short)symNibbles[i + 3]) << 12);
+    }
+    if (loEncoded && !symEncoded)
+    {
+        size_t symbolCount = 0;
+        size_t bitIndex = 0;
+        std::vector<unsigned char> loNibbles;
+        for (size_t i = 0; i < numInstructions; i++)
+            loNibbles.push_back(decodeSingleSymbol(&initialState, loDecode, &bitstream, &bitIndex));
+        for (size_t i = 0; i < loNibbles.size(); i += 2)
+        {
+            unsigned char tempLO = loNibbles[i] + (loNibbles[i + 1] << 4);
+            loVec.push_back(tempLO);
+        }
+    }
+    return decodeBytesShort(&loVec, &symVec);
 }
 
 std::vector<unsigned short> readRawDataVecs(std::vector<unsigned int> *pInput)
