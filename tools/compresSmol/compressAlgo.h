@@ -8,7 +8,6 @@
 #include <mutex>
 #include <thread>
 #include <string>
-#include <bitset>
 #include "fileDispatcher.h"
 #include "tANS.h"
 
