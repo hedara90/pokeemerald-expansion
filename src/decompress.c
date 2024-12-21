@@ -625,11 +625,59 @@ void DecodeInstructionsIwram(u32 headerLoSize, u8 *loVec, u16 *symVec, void *des
 
 void decodeMode0(u32 numInstructions, u8 *pLoVec, u16 *pSymVec, void *dest)
 {
-    DecodeInstructionsIwram(numInstructions, pLoVec, pSymVec, dest);
+    //DecodeInstructionsIwram(numInstructions, pLoVec, pSymVec, dest);
+    u16 *shortDest = (u16 *)dest;
+    u32 currLength;
+    u32 currOffset;
+    u32 destIndex = 0;
+    for (u32 currInstruction = 0; currInstruction < numInstructions; currInstruction++)
+    {
+        currLength = *pLoVec;
+        pLoVec++;
+        if (currLength & CONTINUE_BIT)
+        {
+            currLength ^= CONTINUE_BIT;
+            currLength += *pLoVec << 7;
+            pLoVec++;
+        }
+        currOffset = *pLoVec;
+        pLoVec++;
+        if (currOffset & CONTINUE_BIT)
+        {
+            currOffset ^= CONTINUE_BIT;
+            currOffset += *pLoVec << 7;
+            pLoVec++;
+        }
+        if (currLength == 0)
+        {
+            Copy16(pSymVec, &shortDest[destIndex], currOffset);
+            destIndex += currOffset;
+            pSymVec += currOffset;
+        }
+        else if (currOffset == 1)
+        {
+            Fill16(*pSymVec, &shortDest[destIndex], currLength + 1);
+            destIndex += currLength + 1;
+            pSymVec++;
+        }
+        else
+        {
+            shortDest[destIndex] = *pSymVec;
+            pSymVec++;
+            destIndex++;
+            Copy16(&shortDest[destIndex - currOffset], &shortDest[destIndex], currLength);
+            destIndex += currLength;
+        }
+    }
 }
 
-void decodeMode1(u32 numInstructions, u8 *pLoVec, void *dest)
+void decodeMode1(u32 numInstructions, u8 *pLoVec, const u32 *packedFreqs, void *dest)
 {
+    u32 pFreqs[16];
+    struct DecodeYK *ykTable = sMemoryAllocated;
+    u32 *symbolTable = sMemoryAllocated + (TANS_TABLE_SIZE*sizeof(struct DecodeYK));
+    UnpackFrequencies(packedFreqs, pFreqs);
+    BuildDecompressionTable(pFreqs, ykTable, symbolTable);
 }
 
 void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *dest)
@@ -667,6 +715,7 @@ void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *
         case BASE_ONLY:
             sSymPointer = (u16 *)(&data[sReadIndex]);
             sLoPointer = (u8 *)(&data[sReadIndex]) + 2*header->secondDataOffset;
+            decodeMode0(header->numInstructions, sLoPointer, sSymPointer, dest);
             break;
         case ENCODE_LO:
             pLoFreqs = &data[sReadIndex];
@@ -950,7 +999,7 @@ u32 GetDecompressedDataSize(const u32 *ptr)
         case MODE_LZ77:
             return header->lz77.size;
         default:
-            return header->smol.imageSize*SMOL_IMAGE_SIZE_MULTIPLIER;
+            return header->smol.imageSize;
     }
 }
 
