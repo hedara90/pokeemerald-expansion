@@ -534,7 +534,7 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
     std::vector<unsigned char> bestLO;
     std::vector<unsigned short> bestSym;
     std::vector<ShortCompressionInstruction> bestInstructions;
-    for (size_t minCodeLength = 2; minCodeLength <= 2; minCodeLength++)
+    for (size_t minCodeLength = 2; minCodeLength <= 15; minCodeLength++)
     {
         std::vector<ShortCopy> shortCopies = getShortCopies(usBase, minCodeLength);
         if (!verifyShortCopies(&shortCopies, &usBase))
@@ -551,7 +551,6 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
             continue;
         }
         CompressionMode mode = BASE_ONLY;
-        //std::vector<CompressionMode> modesToUse = {BASE_ONLY};
         std::vector<CompressionMode> modesToUse = {BASE_ONLY, ENCODE_SYMS, ENCODE_DELTA_SYMS, ENCODE_LO, ENCODE_BOTH, ENCODE_BOTH_DELTA_SYMS};
         if (fileName.find("test/compression/") != std::string::npos)
         {
@@ -575,7 +574,6 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
                 settings.canEncodeSyms = true;
             }
         }
-        modesToUse = {ENCODE_BOTH_DELTA_SYMS};
 
         for (CompressionMode currMode : modesToUse)
         {
@@ -595,11 +593,9 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
               || mode == ENCODE_DELTA_SYMS
               || mode == ENCODE_BOTH_DELTA_SYMS))
                 continue;
-            printf("Filling\n");
             CompressedImage image = fillCompressVecNew(loVec, symVec, mode,rawBase.size(), shortInstructions);
             image.loVec = loVec;
             image.symVec = symVec;
-            printf("Verifying compression\n");
             if (!newVerifyCompression(&image, &usBase))
             {
                 compressionFail = true;
@@ -607,7 +603,6 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
             }
             //std::vector<unsigned int> uiVec = getUIntVecFromData(&image);
             //std::vector<unsigned short> decodedImage = readRawDataVecs(&uiVec);
-            printf("Reading\n");
             std::vector<unsigned short> decodedImage = readRawDataVecsNew(image.writeVec);
             if (!compareVectorsShort(&decodedImage, &usBase))
             {
@@ -1748,6 +1743,8 @@ std::vector<unsigned short> readRawDataVecsNew(std::vector<unsigned int> input)
     size_t totalSymbols = 0;
     size_t bitIndex = 0;
     unsigned char prevSymNibble = 0;
+    size_t singleCount = 0;
+    size_t multiCount = 0;
     switch (mode)
     {
         case BASE_ONLY:
@@ -1771,7 +1768,7 @@ std::vector<unsigned short> readRawDataVecsNew(std::vector<unsigned int> input)
                     unsigned char tempChar = charData[loIndex++];
                     loVec.push_back(tempChar);
                     currOffset -= LO_CONTINUE_BIT;
-                    currLength += tempChar << 7;
+                    currOffset += tempChar << 7;
                 }
                 if (currLength == 0)
                     totalSymbols += currOffset;
@@ -1779,9 +1776,7 @@ std::vector<unsigned short> readRawDataVecsNew(std::vector<unsigned int> input)
                     totalSymbols++;
             }
             for (size_t i = 0; i < totalSymbols; i++)
-            {
                 symVec.push_back(shortData[symIndex++]);
-            }
             break;
         case ENCODE_SYMS:
             loIndex = readIndex*4 + secondDataOffset*2;
@@ -1941,6 +1936,7 @@ std::vector<unsigned short> readRawDataVecsNew(std::vector<unsigned int> input)
                     symVec.push_back(currVal);
                 }
             }
+            break;
         case ENCODE_BOTH_DELTA_SYMS:
             for (size_t i = 0; i < numInstructions; i++)
             {
@@ -1968,33 +1964,27 @@ std::vector<unsigned short> readRawDataVecsNew(std::vector<unsigned int> input)
                 }
                 if (currLength == 0)
                 {
-                    unsigned short currVal = 0;
                     //  Decode currOffset symbols
                     for (size_t j = 0; j < currOffset*4; j++)
-                    {
-                        unsigned char currNibble = decodeSingleSymbol(&state, symDecode, &bitstream, &bitIndex);
-                        currNibble += prevSymNibble & 0xf;
-                        prevSymNibble = currNibble;
-                        currVal += currNibble << ((j%4)*4);
-                        if ((j+1)%4 == 0)
-                        {
-                            symVec.push_back(currVal);
-                            currVal = 0;
-                        }
-                    }
+                        symNibbles.push_back(decodeSingleSymbol(&state, symDecode, &bitstream, &bitIndex));
                 }
                 else
                 {
                     //  Decode 1 symbol
-                    unsigned short currVal = 0;
                     for (size_t j = 0; j < 4; j++)
-                    {
-                        unsigned char currNibble = decodeSingleSymbol(&state, symDecode, &bitstream, &bitIndex);
-                        currNibble += prevSymNibble & 0xf;
-                        prevSymNibble = currNibble;
-                        currVal += currNibble << (j*4);
-                    }
+                        symNibbles.push_back(decodeSingleSymbol(&state, symDecode, &bitstream, &bitIndex));
+                }
+            }
+            deltaDecode(&symNibbles, symNibbles.size());
+            unsigned short currVal = 0;
+            for (size_t i = 0; i < symNibbles.size(); i++)
+            {
+                unsigned short tempVal = symNibbles[i];
+                currVal += tempVal << ((i%4)*4);
+                if ((i + 1) % 4 == 0)
+                {
                     symVec.push_back(currVal);
+                    currVal = 0;
                 }
             }
             break;
@@ -2088,14 +2078,6 @@ std::vector<unsigned short> readRawDataVecsNew(std::vector<unsigned int> input)
         }
     }
     */
-    printf("Decoded LOs\n");
-    for (unsigned char uc : loVec)
-        printf("%hhu ", uc);
-    printf("\n");
-    printf("Decoded Syms\n");
-    for (unsigned short us : symVec)
-        printf("%u ", us);
-    printf("\n");
     return decodeBytesShort(&loVec, &symVec);
 }
 

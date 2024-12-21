@@ -338,7 +338,7 @@ int main(int argc, char *argv[])
         if (std::filesystem::exists(input))
         {
             std::vector<unsigned int> inData = readFileAsUInt(input);
-            std::vector<unsigned short> image4bpp = readRawDataVecs(&inData);
+            std::vector<unsigned short> image4bpp = readRawDataVecsNew(inData);
             std::vector<unsigned char> charVec(image4bpp.size()*2);
             for (size_t i = 0; i < image4bpp.size(); i++)
             {

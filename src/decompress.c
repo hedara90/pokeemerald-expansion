@@ -628,6 +628,10 @@ void decodeMode0(u32 numInstructions, u8 *pLoVec, u16 *pSymVec, void *dest)
     DecodeInstructionsIwram(numInstructions, pLoVec, pSymVec, dest);
 }
 
+void decodeMode1(u32 numInstructions, u8 *pLoVec, void *dest)
+{
+}
+
 void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *dest)
 {
     //  This is apparently needed due to Game Freak sending bullshit down the decompression pipeline

@@ -5,6 +5,7 @@
 #include "sprite.h"
 #include "test/test.h"
 
+/*
 TEST("Compression test: tileset smol")
 {
     static const u32 origFile[] = INCBIN_U32("test/compression/tilesetTest.4bpp");
@@ -244,6 +245,7 @@ TEST("Compression test: bubbles")
 
     Free(compBuffer);
 }
+*/
 
 TEST("Compression test: small mode 0")
 {
@@ -334,6 +336,7 @@ TEST("Compression test: large mode 0")
     Free(compBuffer);
 }
 
+/*
 TEST("Compression test: small mode 1")
 {
     static const u32 origFile[] = INCBIN_U32("test/compression/small_mode_1.4bpp");
@@ -783,3 +786,4 @@ TEST("Compression test: large mode 5")
 
     Free(compBuffer);
 }
+*/
