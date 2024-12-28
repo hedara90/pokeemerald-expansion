@@ -330,11 +330,13 @@ void BuildDecompressionTable(const u32 *packedFreqs, struct DecodeYK *table, u32
 }
 
 static EWRAM_DATA u8 sBitIndex = 0;
+static EWRAM_DATA u8 sPrevSymNibble = 0;
 static EWRAM_DATA u32 sReadIndex = 0;
 static EWRAM_DATA u32 sCurrState = 0;
+static EWRAM_DATA u32 sCurrBits = 0;
+static EWRAM_DATA u32 *sBitStream;
 static EWRAM_DATA u16 *sSymPointer;
 static EWRAM_DATA u8 *sLoPointer;
-// Order of allocated memory- ykTable, symbolTable(these go first, because are always aligned), symSize, loSize(last, because not aligned)
 static EWRAM_DATA void *sMemoryAllocated;
 
 struct DecodeStuff
@@ -623,9 +625,103 @@ void DecodeInstructionsIwram(u32 headerLoSize, u8 *loVec, u16 *symVec, void *des
     SwitchToArmCallDecodeInstructions(headerLoSize, loVec, symVec, dest, (void *) funcBuffer);
 }
 
-void decodeMode0(u32 numInstructions, u8 *pLoVec, u16 *pSymVec, void *dest)
+static u16 DecodeSingleSym(struct DecodeYK *ykTable, u32 *symbolTable)
 {
-    //DecodeInstructionsIwram(numInstructions, pLoVec, pSymVec, dest);
+    u16 currSymbol = 0;
+    for (u32 i = 0; i < 4; i++)
+    {
+        currSymbol += symbolTable[sCurrState] << (4*i);
+        u32 nextState = ykTable[sCurrState].yVal;
+        u32 currK = ykTable[sCurrState].kVal;
+        nextState += (sCurrBits >> sBitIndex) & (0xff >> (8-currK));
+        if (sBitIndex + currK < 32)
+        {
+            sBitIndex += currK;
+        }
+        else if (sBitIndex + currK == 32)
+        {
+            sCurrBits = sBitStream[sReadIndex++];
+            sBitIndex = 0;
+        }
+        else if (sBitIndex + currK > 32)    //  If statement can probably be removed
+        {
+            sCurrBits = sBitStream[sReadIndex++];
+            u32 remainder = sBitIndex + currK - 32;
+            nextState += (sCurrBits & ((1u << remainder) - 1)) << (currK - remainder);
+            sBitIndex = remainder;
+        }
+
+        sCurrState = nextState - TANS_TABLE_SIZE;
+    }
+    return currSymbol;
+}
+
+static u16 DecodeSingleSymDelta(struct DecodeYK *ykTable, u32 *symbolTable)
+{
+    u16 currSymbol = 0;
+    for (u32 i = 0; i < 4; i++)
+    {
+        u8 tempSym = (symbolTable[sCurrState] + sPrevSymNibble) & 0xf;
+        sPrevSymNibble = tempSym;
+        currSymbol += tempSym << (4*i);
+        u32 nextState = ykTable[sCurrState].yVal;
+        u32 currK = ykTable[sCurrState].kVal;
+        nextState += (sCurrBits >> sBitIndex) & (0xff >> (8-currK));
+        if (sBitIndex + currK < 32)
+        {
+            sBitIndex += currK;
+        }
+        else if (sBitIndex + currK == 32)
+        {
+            sCurrBits = sBitStream[sReadIndex++];
+            sBitIndex = 0;
+        }
+        else if (sBitIndex + currK > 32)    //  If statement can probably be removed
+        {
+            sCurrBits = sBitStream[sReadIndex++];
+            u32 remainder = sBitIndex + currK - 32;
+            nextState += (sCurrBits & ((1u << remainder) - 1)) << (currK - remainder);
+            sBitIndex = remainder;
+        }
+
+        sCurrState = nextState - TANS_TABLE_SIZE;
+    }
+    return currSymbol;
+}
+
+static u8 DecodeSingleLO(struct DecodeYK *ykTable, u32 *symbolTable)
+{
+    u16 currSymbol = 0;
+    for (u32 i = 0; i < 2; i++)
+    {
+        currSymbol += symbolTable[sCurrState] << (4*i);
+        u32 nextState = ykTable[sCurrState].yVal;
+        u32 currK = ykTable[sCurrState].kVal;
+        nextState += (sCurrBits >> sBitIndex) & (0xff >> (8-currK));
+        if (sBitIndex + currK < 32)
+        {
+            sBitIndex += currK;
+        }
+        else if (sBitIndex + currK == 32)
+        {
+            sCurrBits = sBitStream[sReadIndex++];
+            sBitIndex = 0;
+        }
+        else if (sBitIndex + currK > 32)    //  If statement can probably be removed
+        {
+            sCurrBits = sBitStream[sReadIndex++];
+            u32 remainder = sBitIndex + currK - 32;
+            nextState += (sCurrBits & ((1u << remainder) - 1)) << (currK - remainder);
+            sBitIndex = remainder;
+        }
+
+        sCurrState = nextState - TANS_TABLE_SIZE;
+    }
+    return currSymbol;
+}
+
+static void DecodeMode0(u32 numInstructions, u8 *pLoVec, u16 *pSymVec, void *dest)
+{
     u16 *shortDest = (u16 *)dest;
     u32 currLength;
     u32 currOffset;
@@ -671,13 +767,263 @@ void decodeMode0(u32 numInstructions, u8 *pLoVec, u16 *pSymVec, void *dest)
     }
 }
 
-void decodeMode1(u32 numInstructions, u8 *pLoVec, const u32 *packedFreqs, void *dest)
+static void DecodeMode1(u32 numInstructions, u8 *pLoVec, const u32 *packedFreqs, void *dest)
 {
-    u32 pFreqs[16];
-    struct DecodeYK *ykTable = sMemoryAllocated;
-    u32 *symbolTable = sMemoryAllocated + (TANS_TABLE_SIZE*sizeof(struct DecodeYK));
-    UnpackFrequencies(packedFreqs, pFreqs);
-    BuildDecompressionTable(pFreqs, ykTable, symbolTable);
+    struct DecodeYK *ykTable = Alloc(TANS_TABLE_SIZE*sizeof(struct DecodeYK));
+    u32 *symbolTable = Alloc(TANS_TABLE_SIZE*sizeof(u32));
+    BuildDecompressionTable(packedFreqs, ykTable, symbolTable);
+    sCurrBits = sBitStream[sReadIndex];
+    sReadIndex++;
+    u16 *shortDest = (u16 *)dest;
+    u32 currLength;
+    u32 currOffset;
+    u32 destIndex = 0;
+    for (u32 currInstruction = 0; currInstruction < numInstructions; currInstruction++)
+    {
+        currLength = *pLoVec;
+        pLoVec++;
+        if (currLength & CONTINUE_BIT)
+        {
+            currLength ^= CONTINUE_BIT;
+            currLength += *pLoVec << 7;
+            pLoVec++;
+        }
+        currOffset = *pLoVec;
+        pLoVec++;
+        if (currOffset & CONTINUE_BIT)
+        {
+            currOffset ^= CONTINUE_BIT;
+            currOffset += *pLoVec << 7;
+            pLoVec++;
+        }
+        if (currLength == 0)
+        {
+            for (size_t i = 0; i < currOffset; i++)
+                shortDest[destIndex++] = DecodeSingleSym(ykTable, symbolTable);
+        }
+        else if (currOffset == 1)
+        {
+            u16 currSymbol = DecodeSingleSym(ykTable, symbolTable);
+            Fill16(currSymbol, &shortDest[destIndex], currLength + 1);
+            destIndex += currLength + 1;
+        }
+        else
+        {
+            shortDest[destIndex++] = DecodeSingleSym(ykTable, symbolTable);
+            Copy16(&shortDest[destIndex - currOffset], &shortDest[destIndex], currLength);
+            destIndex += currLength;
+        }
+    }
+    Free(ykTable);
+    Free(symbolTable);
+}
+
+static void DecodeMode2(u32 numInstructions, u8 *pLoVec, const u32 *packedFreqs, void *dest)
+{
+    struct DecodeYK *ykTable = Alloc(TANS_TABLE_SIZE*sizeof(struct DecodeYK));
+    u32 *symbolTable = Alloc(TANS_TABLE_SIZE*sizeof(u32));
+    BuildDecompressionTable(packedFreqs, ykTable, symbolTable);
+    sCurrBits = sBitStream[sReadIndex];
+    sReadIndex++;
+    u16 *shortDest = (u16 *)dest;
+    u32 currLength;
+    u32 currOffset;
+    u32 destIndex = 0;
+    for (u32 currInstruction = 0; currInstruction < numInstructions; currInstruction++)
+    {
+        currLength = *pLoVec;
+        pLoVec++;
+        if (currLength & CONTINUE_BIT)
+        {
+            currLength ^= CONTINUE_BIT;
+            currLength += *pLoVec << 7;
+            pLoVec++;
+        }
+        currOffset = *pLoVec;
+        pLoVec++;
+        if (currOffset & CONTINUE_BIT)
+        {
+            currOffset ^= CONTINUE_BIT;
+            currOffset += *pLoVec << 7;
+            pLoVec++;
+        }
+        if (currLength == 0)
+        {
+            for (size_t i = 0; i < currOffset; i++)
+                shortDest[destIndex++] = DecodeSingleSymDelta(ykTable, symbolTable);
+        }
+        else if (currOffset == 1)
+        {
+            u16 currSymbol = DecodeSingleSymDelta(ykTable, symbolTable);
+            Fill16(currSymbol, &shortDest[destIndex], currLength + 1);
+            destIndex += currLength + 1;
+        }
+        else
+        {
+            shortDest[destIndex++] = DecodeSingleSymDelta(ykTable, symbolTable);
+            Copy16(&shortDest[destIndex - currOffset], &shortDest[destIndex], currLength);
+            destIndex += currLength;
+        }
+    }
+    Free(ykTable);
+    Free(symbolTable);
+}
+
+static void DecodeMode3(u32 numInstructions, u16 *pSymVec, const u32 *packedFreqs, void *dest)
+{
+    struct DecodeYK *ykTable = Alloc(TANS_TABLE_SIZE*sizeof(struct DecodeYK));
+    u32 *symbolTable = Alloc(TANS_TABLE_SIZE*sizeof(u32));
+    BuildDecompressionTable(packedFreqs, ykTable, symbolTable);
+    sCurrBits = sBitStream[sReadIndex];
+    sReadIndex++;
+    u16 *shortDest = (u16 *)dest;
+    u32 currLength;
+    u32 currOffset;
+    u32 destIndex = 0;
+    for (u32 currInstruction = 0; currInstruction < numInstructions; currInstruction++)
+    {
+        currLength = DecodeSingleLO(ykTable, symbolTable);
+        if (currLength & CONTINUE_BIT)
+        {
+            currLength ^= CONTINUE_BIT;
+            currLength += (u32)DecodeSingleLO(ykTable, symbolTable) << 7;
+        }
+        currOffset = DecodeSingleLO(ykTable, symbolTable);
+        if (currOffset & CONTINUE_BIT)
+        {
+            currOffset ^= CONTINUE_BIT;
+            currOffset += (u32)DecodeSingleLO(ykTable, symbolTable) << 7;
+        }
+        if (currLength == 0)
+        {
+            for (size_t i = 0; i < currOffset; i++)
+            {
+                shortDest[destIndex++] = *pSymVec;
+                pSymVec++;
+            }
+        }
+        else if (currOffset == 1)
+        {
+            Fill16(*pSymVec, &shortDest[destIndex], currLength + 1);
+            pSymVec++;
+            destIndex += currLength + 1;
+        }
+        else
+        {
+            shortDest[destIndex++] = *pSymVec;
+            pSymVec++;
+            Copy16(&shortDest[destIndex - currOffset], &shortDest[destIndex], currLength);
+            destIndex += currLength;
+        }
+    }
+    Free(ykTable);
+    Free(symbolTable);
+}
+
+static void DecodeMode4(u32 numInstructions, const u32 *packedLOFreqs, const u32 *packedSymFreqs, void *dest)
+{
+    struct DecodeYK *loTable = Alloc(TANS_TABLE_SIZE*sizeof(struct DecodeYK));
+    u32 *loSymbols = Alloc(TANS_TABLE_SIZE*sizeof(u32));
+    struct DecodeYK *symTable = Alloc(TANS_TABLE_SIZE*sizeof(struct DecodeYK));
+    u32 *symSymbols = Alloc(TANS_TABLE_SIZE*sizeof(u32));
+    sCurrBits = sBitStream[sReadIndex];
+    sReadIndex++;
+    u16 *shortDest = (u16 *)dest;
+    u32 currLength;
+    u32 currOffset;
+    u32 destIndex = 0;
+    BuildDecompressionTable(packedLOFreqs, loTable, loSymbols);
+    BuildDecompressionTable(packedSymFreqs, symTable, symSymbols);
+    for (u32 currInstruction = 0; currInstruction < numInstructions; currInstruction++)
+    {
+        currLength = DecodeSingleLO(loTable, loSymbols);
+        if (currLength & CONTINUE_BIT)
+        {
+            currLength ^= CONTINUE_BIT;
+            currLength += (u32)DecodeSingleLO(loTable, loSymbols) << 7;
+        }
+        currOffset = DecodeSingleLO(loTable, loSymbols);
+        if (currOffset & CONTINUE_BIT)
+        {
+            currOffset ^= CONTINUE_BIT;
+            currOffset += (u32)DecodeSingleLO(loTable, loSymbols) << 7;
+        }
+        if (currLength == 0)
+        {
+            for (size_t i = 0; i < currOffset; i++)
+            {
+                shortDest[destIndex++] = DecodeSingleSym(symTable, symSymbols);
+            }
+        }
+        else if (currOffset == 1)
+        {
+            Fill16(DecodeSingleSym(symTable, symSymbols), &shortDest[destIndex], currLength + 1);
+            destIndex += currLength + 1;
+        }
+        else
+        {
+            shortDest[destIndex++] = DecodeSingleSym(symTable, symSymbols);
+            Copy16(&shortDest[destIndex - currOffset], &shortDest[destIndex], currLength);
+            destIndex += currLength;
+        }
+    }
+    Free(loTable);
+    Free(symTable);
+    Free(loSymbols);
+    Free(symSymbols);
+}
+
+static void DecodeMode5(u32 numInstructions, const u32 *packedLOFreqs, const u32 *packedSymFreqs, void *dest)
+{
+    struct DecodeYK *loTable = Alloc(TANS_TABLE_SIZE*sizeof(struct DecodeYK));
+    u32 *loSymbols = Alloc(TANS_TABLE_SIZE*sizeof(u32));
+    struct DecodeYK *symTable = Alloc(TANS_TABLE_SIZE*sizeof(struct DecodeYK));
+    u32 *symSymbols = Alloc(TANS_TABLE_SIZE*sizeof(u32));
+    sCurrBits = sBitStream[sReadIndex];
+    sReadIndex++;
+    u16 *shortDest = (u16 *)dest;
+    u32 currLength;
+    u32 currOffset;
+    u32 destIndex = 0;
+    BuildDecompressionTable(packedLOFreqs, loTable, loSymbols);
+    BuildDecompressionTable(packedSymFreqs, symTable, symSymbols);
+    for (u32 currInstruction = 0; currInstruction < numInstructions; currInstruction++)
+    {
+        currLength = DecodeSingleLO(loTable, loSymbols);
+        if (currLength & CONTINUE_BIT)
+        {
+            currLength ^= CONTINUE_BIT;
+            currLength += (u32)DecodeSingleLO(loTable, loSymbols) << 7;
+        }
+        currOffset = DecodeSingleLO(loTable, loSymbols);
+        if (currOffset & CONTINUE_BIT)
+        {
+            currOffset ^= CONTINUE_BIT;
+            currOffset += (u32)DecodeSingleLO(loTable, loSymbols) << 7;
+        }
+        if (currLength == 0)
+        {
+            for (size_t i = 0; i < currOffset; i++)
+            {
+                shortDest[destIndex++] = DecodeSingleSymDelta(symTable, symSymbols);
+            }
+        }
+        else if (currOffset == 1)
+        {
+            Fill16(DecodeSingleSymDelta(symTable, symSymbols), &shortDest[destIndex], currLength + 1);
+            destIndex += currLength + 1;
+        }
+        else
+        {
+            shortDest[destIndex++] = DecodeSingleSymDelta(symTable, symSymbols);
+            Copy16(&shortDest[destIndex - currOffset], &shortDest[destIndex], currLength);
+            destIndex += currLength;
+        }
+    }
+    Free(loTable);
+    Free(symTable);
+    Free(loSymbols);
+    Free(symSymbols);
 }
 
 void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *dest)
@@ -693,16 +1039,16 @@ void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *
     //u32 headerSymSize = header->symSize;
     //u32 alignedLoSize = header->loSize % 2 == 1 ? headerLoSize + 1 : headerLoSize;
     // LoSize HAS TO go last, because it is NOT aligned
-    bool32 loEncoded = isModeLoEncoded(header->mode);
-    bool32 symEncoded = isModeSymEncoded(header->mode);
+    //bool32 loEncoded = isModeLoEncoded(header->mode);
+    //bool32 symEncoded = isModeSymEncoded(header->mode);
     //bool32 symDelta = isModeSymDelta(header->mode);
-    u32 allocSize = 0;
-    if (loEncoded)
-        allocSize += TANS_TABLE_SIZE*(sizeof(struct DecodeYK) + 4);
-    if (symEncoded)
-        allocSize += TANS_TABLE_SIZE*(sizeof(struct DecodeYK) + 4);
+    //u32 allocSize = 0;
+    //if (loEncoded)
+    //    allocSize += TANS_TABLE_SIZE*(sizeof(struct DecodeYK) + 4);
+    //if (symEncoded)
+    //    allocSize += TANS_TABLE_SIZE*(sizeof(struct DecodeYK) + 4);
     //  With combined stream we don't allocate loVec and symVec, they're read from ROM
-    sMemoryAllocated = Alloc(allocSize);
+    //sMemoryAllocated = Alloc(allocSize);
     //u16 *symVec = sMemoryAllocated + (TANS_TABLE_SIZE*sizeof(struct DecodeYK) + (TANS_TABLE_SIZE * 4));
     //u8 *loVec = sMemoryAllocated + (TANS_TABLE_SIZE*sizeof(struct DecodeYK) + (TANS_TABLE_SIZE * 4)) + headerSymSize*2;
 
@@ -715,61 +1061,44 @@ void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *
         case BASE_ONLY:
             sSymPointer = (u16 *)(&data[sReadIndex]);
             sLoPointer = (u8 *)(&data[sReadIndex]) + 2*header->secondDataOffset;
-            decodeMode0(header->numInstructions, sLoPointer, sSymPointer, dest);
+            DecodeMode0(header->numInstructions, sLoPointer, sSymPointer, dest);
+            break;
+        case ENCODE_SYMS:
+            pSymFreqs = &data[sReadIndex];
+            sReadIndex += 3;
+            sLoPointer = (u8 *)(&data[sReadIndex]) + 2*header->secondDataOffset;
+            sBitStream = (u32 *)data;
+            DecodeMode1(header->numInstructions, sLoPointer, pSymFreqs, dest);
+            break;
+        case ENCODE_DELTA_SYMS:
+            pSymFreqs = &data[sReadIndex];
+            sReadIndex += 3;
+            sLoPointer = (u8 *)(&data[sReadIndex]) + 2*header->secondDataOffset;
+            sBitStream = (u32 *)data;
+            DecodeMode2(header->numInstructions, sLoPointer, pSymFreqs, dest);
             break;
         case ENCODE_LO:
             pLoFreqs = &data[sReadIndex];
             sReadIndex += 3;
             sSymPointer = (u16 *)(&data[sReadIndex]) + header->secondDataOffset;
-            break;
-        case ENCODE_DELTA_SYMS:
-        case ENCODE_SYMS:
-            pSymFreqs = &data[sReadIndex];
-            sReadIndex += 3;
-            sLoPointer = (u8 *)(&data[sReadIndex]) + 2*header->secondDataOffset;
+            sBitStream = (u32 *)data;
+            DecodeMode3(header->numInstructions, sSymPointer, pLoFreqs, dest);
             break;
         case ENCODE_BOTH:
+            pLoFreqs = &data[sReadIndex];
+            pSymFreqs = &data[sReadIndex + 3];
+            sReadIndex += 6;
+            sBitStream = (u32 *)data;
+            DecodeMode4(header->numInstructions, pLoFreqs, pSymFreqs, dest);
+            break;
         case ENCODE_BOTH_DELTA_SYMS:
             pLoFreqs = &data[sReadIndex];
             pSymFreqs = &data[sReadIndex + 3];
             sReadIndex += 6;
+            sBitStream = (u32 *)data;
+            DecodeMode5(header->numInstructions, pLoFreqs, pSymFreqs, dest);
             break;
     }
-
-    sBitIndex = 0;
-    /*
-    if (loEncoded)
-    {
-        DecodeLOtANS(data, pLoFreqs, loVec, headerLoSize);
-        leftoverPos += 12;
-    }
-    if (symEncoded)
-    {
-        if (symDelta)
-            DecodeSymDeltatANS(data, pSymFreqs, symVec, headerSymSize);
-        else
-            DecodeSymtANS(data, pSymFreqs, symVec, headerSymSize);
-        leftoverPos += 12;
-    }
-
-    if (loEncoded || symEncoded)
-        leftoverPos += 4*header->bitstreamSize;
-
-    if (symEncoded == FALSE)
-    {
-        DmaCopy16(3, leftoverPos, symVec, headerSymSize*2);
-        leftoverPos += headerSymSize*2;
-    }
-
-    if (loEncoded == FALSE)
-    {
-        DmaCopy16(3, leftoverPos, loVec, alignedLoSize);
-    }
-
-    DecodeInstructionsIwram(headerLoSize, loVec, symVec, dest);
-    */
-
-    Free(sMemoryAllocated);
 }
 
 bool32 isModeLoEncoded(enum CompressionMode mode)

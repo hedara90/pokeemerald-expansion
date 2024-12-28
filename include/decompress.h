@@ -117,11 +117,4 @@ void LoadSpecialPokePic(void *dest, s32 species, u32 personality, bool8 isFrontP
 
 u32 GetDecompressedDataSize(const u32 *ptr);
 
-void decodeMode0(u32 numInstructions, u8 *pLoVec, u16 *pSymVec, void *dest);
-void decodeMode1(u32 numInstructions, u8 *pLoVec, const u32 *packedFreqs, void *dest);
-void decodeMode2(u32 numInstructions, u8 *pLoVec, void *dest);
-void decodeMode3(u32 numInstructions, u16 *pSymVec, void *dest);
-void decodeMode4(u32 numInstructions, void *dest);
-void decodeMode5(u32 numInstructions, void *dest);
-
 #endif // GUARD_DECOMPRESS_H

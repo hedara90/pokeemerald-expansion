@@ -534,7 +534,7 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
     std::vector<unsigned char> bestLO;
     std::vector<unsigned short> bestSym;
     std::vector<ShortCompressionInstruction> bestInstructions;
-    for (size_t minCodeLength = 2; minCodeLength <= 15; minCodeLength++)
+    for (size_t minCodeLength = 2; minCodeLength <= 2; minCodeLength++)
     {
         std::vector<ShortCopy> shortCopies = getShortCopies(usBase, minCodeLength);
         if (!verifyShortCopies(&shortCopies, &usBase))
@@ -596,6 +596,7 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
             CompressedImage image = fillCompressVecNew(loVec, symVec, mode,rawBase.size(), shortInstructions);
             image.loVec = loVec;
             image.symVec = symVec;
+
             if (!newVerifyCompression(&image, &usBase))
             {
                 compressionFail = true;
@@ -606,6 +607,19 @@ CompressedImage processImageData(std::vector<unsigned char> input, InputSettings
             std::vector<unsigned short> decodedImage = readRawDataVecsNew(image.writeVec);
             if (!compareVectorsShort(&decodedImage, &usBase))
             {
+                /*
+                if (decodedImage.size() != usBase.size())
+                {
+                    fprintf(stderr, "Shit's fucked\n");
+                }
+                else
+                {
+                    for (size_t i = 0; i < decodedImage.size(); i++)
+                    {
+                        printf("%u %u\n", decodedImage[i], usBase[i]);
+                    }
+                }
+                */
                 uIntConversionFail = true;
                 continue;
             }
@@ -1798,7 +1812,7 @@ std::vector<unsigned short> readRawDataVecsNew(std::vector<unsigned int> input)
                     unsigned char tempChar = charData[loIndex++];
                     loVec.push_back(tempChar);
                     currOffset -= LO_CONTINUE_BIT;
-                    currLength += tempChar << 7;
+                    currOffset += tempChar << 7;
                 }
                 if (currLength == 0)
                     totalSymbols += currOffset;
@@ -1833,7 +1847,7 @@ std::vector<unsigned short> readRawDataVecsNew(std::vector<unsigned int> input)
                     unsigned char tempChar = charData[loIndex++];
                     loVec.push_back(tempChar);
                     currOffset -= LO_CONTINUE_BIT;
-                    currLength += tempChar << 7;
+                    currOffset += tempChar << 7;
                 }
                 if (currLength == 0)
                     totalSymbols += currOffset;
