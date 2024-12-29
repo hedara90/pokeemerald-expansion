@@ -1034,6 +1034,10 @@ void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *
     //u8 *leftoverPos = (u8 *)data;
 
     sCurrState = header->initialState;
+    sBitIndex = 0;
+    sPrevSymNibble = 0;
+    sReadIndex = 0;
+    sCurrBits = 0;
     // Allocate also for ykTable and symbolTable
     //u32 headerLoSize = header->loSize;
     //u32 headerSymSize = header->symSize;
