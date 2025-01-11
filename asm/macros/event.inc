@@ -2437,3 +2437,9 @@
 	.2byte \dest
 	.endm
 
+	@ Opens the specified crafting UI
+	.macro openevencrafting ui:req
+	callnative OpenEvenCraftingUI_FromScript
+	.byte \ui
+	.endm
+
