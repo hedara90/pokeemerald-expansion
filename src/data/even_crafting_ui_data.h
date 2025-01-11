@@ -5,10 +5,6 @@ const u32 sECU_defaultTiles[] = INCBIN_U32("graphics/even_crafting/default_tiles
 const u32 sECU_defaultTilemap[] = INCBIN_U32("graphics/even_crafting/default_tiles.bin.lz");
 const u16 sECU_defaultPalette[] = INCBIN_U16("graphics/even_crafting/default_tiles.gbapal");
 
-const u32 sECU_Alchemy4Tiles[] = INCBIN_U32("graphics/even_crafting/alchemy4_tiles.4bpp.lz");
-const u32 sECU_Alchemy4Tilemap[] = INCBIN_U32("graphics/even_crafting/alchemy4_tiles.bin.lz");
-const u16 sECU_Alchemy4Palette[] = INCBIN_U16("graphics/even_crafting/alchemy4_tiles.gbapal");
-
 const struct EvenCraftingUiTemplate sECU_Templates[ECU_TEMPLATE_NUMBER] =
 {
     [ECU_DEFAULT] =
