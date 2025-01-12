@@ -138,7 +138,7 @@ Debug_EventScript_Text_DefensiveIVs:
 
 Debug_EventScript_Script_1::
 	fadescreen FADE_TO_BLACK
-	openevencrafting 0
+	openevencrafting ECU_DEFAULT
 	release
 	end
 

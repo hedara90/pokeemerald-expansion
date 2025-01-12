@@ -1,6 +1,7 @@
 #ifndef GUARD_EVEN_CRAFTING_H
 #define GUARD_EVEN_CRAFTING_H
 #include "global.h"
+#include "constants/even_crafting_constants.h"
 
 #define ITEM_IS_CONSUMED_ON_ATTEMPT 128
 
@@ -8,29 +9,6 @@
 #define MAX_CATEGORY_RECIPES        40
 
 #define CATEGORY_NAME_MAX_LENGTH    20
-
-enum Recipes {
-    RECIPE_POTION,
-    RECIPE_SUPER_POTION,
-    //  RECIPE_NONE must after all actual recipes
-    RECIPE_NONE,
-    ERROR_MISSING_INGREDIENTS,
-    ERROR_RECIPE_REQUIRES_UNLOCK,
-};
-
-enum IngredientCategories {
-    INGREDIENT_CATEGORY_PLANT,
-    INGREDIENT_CATEGORY_FLUID,
-    //  Must be last
-    NUM_INGREDIENT_CATEGORIES
-};
-
-enum RecipeCategories {
-    RECIPE_CATEGORY_MEDICINE,
-    RECIPE_CATEGORY_TM,
-    //  Must be last
-    NUM_RECIPE_CATEGORIES
-};
 
 struct IngredientCount {
     u16 item;

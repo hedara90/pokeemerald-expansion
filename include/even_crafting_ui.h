@@ -4,14 +4,7 @@
 #include "gba/types.h"
 #include "main.h"
 #include "even_crafting.h"
-
-enum EvenListAction
-{
-    EVEN_LIST_DOWN,
-    EVEN_LIST_UP,
-    EVEN_LIST_INIT,
-    EVEN_LIST_ADD,
-};
+#include "constants/even_crafting_constants.h"
 
 struct IngredientPos
 {
@@ -39,13 +32,6 @@ struct EvenCraftingUiTemplate
     const u8 outputX;
     const u8 outputY;
     const struct IngredientPos positions[12];
-};
-
-enum EvenCraftingUiTemplates
-{
-    ECU_DEFAULT,
-    //  Must be last
-    ECU_TEMPLATE_NUMBER
 };
 
 void EvenCraftingUi_Init(MainCallback callback, enum EvenCraftingUiTemplates template);
