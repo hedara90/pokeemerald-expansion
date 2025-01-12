@@ -115,7 +115,7 @@ static const struct BgTemplate sEvenCraftingUiBgTemplates[] =
 #define CATEGORY_WIDTH  10
 #define CATEGORY_HEIGHT 2
 #define LIST_WIDTH      10
-#define LIST_HEIGHT     12
+#define LIST_HEIGHT     14
 
 #define HINTS_SIZE      HINTS_WIDTH * HINTS_HEIGHT
 #define HEADER_SIZE     HEADER_WIDTH * HEADER_HEIGHT
@@ -991,6 +991,8 @@ static void EvenCraftingUi_CraftItem(enum Recipes recipe)
         EvenCraftingUi_RemoveLastItem();
     EvenCraftingUi_AddResultSprite(GetOutputFromRecipe(recipe));
     sEvenCraftingUiState->hasCraftResult = TRUE;
+    if (!IsCraftingRecipeUnlocked(recipe))
+        UnlockRecipe(recipe);
 }
 
 static void EvenCraftingUi_AddRecipe(void)

@@ -124,19 +124,6 @@ void InitCraftProcess()
     Free(items);
 }
 
-void PopulateList(u32 listType)
-{
-    u32 totalItems = BAG_ITEMS_COUNT + BAG_KEYITEMS_COUNT + BAG_POKEBALLS_COUNT + BAG_TMHM_COUNT + BAG_BERRIES_COUNT;
-    struct ItemSlot *itemsStart = gSaveBlock1Ptr->bagPocket_Items;
-    for (u32 i = 0; i < totalItems; i++)
-    {
-        u16 currItem = itemsStart[i].itemId;
-        if (sItemIngredientSettings[currItem] & listType)
-        {
-        }
-    }
-}
-
 bool32 IsItemInCurrentCategory(enum IngredientCategories currCategory, u16 item)
 {
     return sItemIngredientSettings[item] & 1 << currCategory;
@@ -187,7 +174,7 @@ const u8 *GetRecipeName(enum Recipes recipe)
     return sCraftingRecipes[recipe].recipeName;
 }
 
-void TestCraft()
+void UnlockRecipe(enum Recipes recipe)
 {
-    CraftItem(RECIPE_POTION);
+    //  Here is where recipe unlocking happens
 }

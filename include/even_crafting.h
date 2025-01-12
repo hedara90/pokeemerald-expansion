@@ -69,5 +69,4 @@ void FillItemFromRecipe(enum Recipes recipe, u16 *items);
 bool32 IsCraftingRecipeUnlocked(enum Recipes recipe);
 bool32 IsCraftingRecipeInCategory(enum Recipes recipe, enum RecipeCategories category);
 
-void TestCraft();
 #endif
