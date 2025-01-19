@@ -66,7 +66,10 @@ struct EvenCraftingUiState
 
 enum WindowIds
 {
-    WIN_UI_HINTS,
+    WIN_UI_HINTS_A,
+    WIN_UI_HINTS_B,
+    WIN_UI_HINTS_START,
+    WIN_UI_HINTS_SELECT,
     WIN_LIST_HEADER,
     WIN_LIST_CATEGORY,
     WIN_LIST,
@@ -103,12 +106,15 @@ static const struct BgTemplate sEvenCraftingUiBgTemplates[] =
     {
         .bg = 1,
         .charBaseIndex = 3,
-        .mapBaseIndex = 30,
+        .mapBaseIndex = 20,
         .priority = 2
     }
 };
 
-#define HINTS_WIDTH     30
+#define HINTS_A_WIDTH     6
+#define HINTS_B_WIDTH     7
+#define HINTS_START_WIDTH 7
+#define HINTS_SELECT_WIDTH 10
 #define HINTS_HEIGHT    2
 #define HEADER_WIDTH    10
 #define HEADER_HEIGHT   2
@@ -117,27 +123,63 @@ static const struct BgTemplate sEvenCraftingUiBgTemplates[] =
 #define LIST_WIDTH      10
 #define LIST_HEIGHT     14
 
-#define HINTS_SIZE      HINTS_WIDTH * HINTS_HEIGHT
+#define HINTS_A_SIZE      HINTS_A_WIDTH * HINTS_HEIGHT
+#define HINTS_B_SIZE      HINTS_B_WIDTH * HINTS_HEIGHT
+#define HINTS_START_SIZE      HINTS_START_WIDTH * HINTS_HEIGHT
+#define HINTS_SELECT_SIZE      HINTS_SELECT_WIDTH * HINTS_HEIGHT
 #define HEADER_SIZE     HEADER_WIDTH * HEADER_HEIGHT
 #define CATEGORY_SIZE   CATEGORY_WIDTH * CATEGORY_HEIGHT
 #define LIST_SIZE       LIST_WIDTH * LIST_HEIGHT
 
-#define HINTS_BASEBLOCK     1
-#define HEADER_BASEBLOCK    HINTS_BASEBLOCK + HINTS_SIZE
-#define LIST_BASEBLOCK      HEADER_BASEBLOCK + HEADER_SIZE
-#define CATEGORY_BASEBLOCK  LIST_BASEBLOCK + LIST_SIZE
+#define HINTS_A_BASEBLOCK       1
+#define HINTS_B_BASEBLOCK       HINTS_A_BASEBLOCK + HINTS_A_SIZE
+#define HINTS_START_BASEBLOCK   HINTS_B_BASEBLOCK + HINTS_B_SIZE
+#define HINTS_SELECT_BASEBLOCK  HINTS_START_BASEBLOCK + HINTS_START_SIZE
+#define HEADER_BASEBLOCK        HINTS_SELECT_BASEBLOCK + HINTS_SELECT_SIZE
+#define LIST_BASEBLOCK          HEADER_BASEBLOCK + HEADER_SIZE
+#define CATEGORY_BASEBLOCK      LIST_BASEBLOCK + LIST_SIZE
 
 static const struct WindowTemplate sEvenCraftingUiWindowTemplates[] =
 {
-    [WIN_UI_HINTS] =
+    [WIN_UI_HINTS_A] =
     {
         .bg = 0,
         .tilemapLeft = 0,
         .tilemapTop = 18,
-        .width = HINTS_WIDTH,
+        .width = HINTS_A_WIDTH,
         .height = HINTS_HEIGHT,
         .paletteNum = 15,
-        .baseBlock = HINTS_BASEBLOCK
+        .baseBlock = HINTS_A_BASEBLOCK
+    },
+    [WIN_UI_HINTS_B] =
+    {
+        .bg = 0,
+        .tilemapLeft = HINTS_A_WIDTH,
+        .tilemapTop = 18,
+        .width = HINTS_B_WIDTH,
+        .height = HINTS_HEIGHT,
+        .paletteNum = 15,
+        .baseBlock = HINTS_B_BASEBLOCK
+    },
+    [WIN_UI_HINTS_START] =
+    {
+        .bg = 0,
+        .tilemapLeft = HINTS_A_WIDTH + HINTS_B_WIDTH,
+        .tilemapTop = 18,
+        .width = HINTS_START_WIDTH,
+        .height = HINTS_HEIGHT,
+        .paletteNum = 15,
+        .baseBlock = HINTS_START_BASEBLOCK
+    },
+    [WIN_UI_HINTS_SELECT] =
+    {
+        .bg = 0,
+        .tilemapLeft = HINTS_A_WIDTH + HINTS_B_WIDTH + HINTS_START_WIDTH,
+        .tilemapTop = 18,
+        .width = HINTS_SELECT_WIDTH,
+        .height = HINTS_HEIGHT,
+        .paletteNum = 15,
+        .baseBlock = HINTS_SELECT_BASEBLOCK
     },
     [WIN_LIST_HEADER] =
     {
@@ -203,7 +245,8 @@ static bool8 EvenCraftingUi_InitBgs(void);
 static void EvenCraftingUi_FadeAndBail(void);
 static bool8 EvenCraftingUi_LoadGraphics(void);
 static void EvenCraftingUi_InitWindows(void);
-static void EvenCraftingUi_PrintUiButtonHints(void);
+static void EvenCraftingUi_PrintFixedUiButtonHints();
+static void EvenCraftingUi_PrintDynamicUiButtonHints();
 static void EvenCraftingUi_PrintListHeader(void);
 static void EvenCraftingUi_PrintListCategory(void);
 static void EvenCraftingUi_PrintList(void);
@@ -364,7 +407,9 @@ static void EvenCraftingUi_SetupCB(void)
 
         EvenCraftingUi_InitScrollList();
 
-        EvenCraftingUi_PrintUiButtonHints();
+        EvenCraftingUi_PrintFixedUiButtonHints();
+
+        EvenCraftingUi_PrintDynamicUiButtonHints();
 
         EvenCraftingUi_PrintListHeader();
 
@@ -420,14 +465,14 @@ static void Task_EvenCraftingUiMainInput(u8 taskId)
             if (sEvenCraftingUiState->hasCraftResult)
             {
                 EvenCraftingUi_RemoveOutput();
-                EvenCraftingUi_PrintUiButtonHints();
+                EvenCraftingUi_PrintDynamicUiButtonHints();
             }
             else if (sEvenCraftingUiState->numItemsAdded < sEvenCraftingUiState->template->maxIngredients)
             {
                 PlaySE(ECU_ADD_ITEM_SOUND);
                 EvenCraftingUi_AddCurrentItem();
                 if (sEvenCraftingUiState->numItemsAdded == 1)
-                    EvenCraftingUi_PrintUiButtonHints();
+                    EvenCraftingUi_PrintDynamicUiButtonHints();
             }
             else
             {
@@ -450,7 +495,7 @@ static void Task_EvenCraftingUiMainInput(u8 taskId)
                 PlaySE(ECU_ADD_ITEM_FAIL_SOUND);
             }
         }
-        EvenCraftingUi_PrintUiButtonHints();
+        EvenCraftingUi_PrintDynamicUiButtonHints();
     }
     if (JOY_NEW(B_BUTTON))
     {
@@ -459,7 +504,7 @@ static void Task_EvenCraftingUiMainInput(u8 taskId)
             //  Remove last item
             EvenCraftingUi_RemoveLastItem();
             if (sEvenCraftingUiState->numItemsAdded == 0)
-                EvenCraftingUi_PrintUiButtonHints();
+                EvenCraftingUi_PrintDynamicUiButtonHints();
         }
         else
         {
@@ -488,7 +533,7 @@ static void Task_EvenCraftingUiMainInput(u8 taskId)
         }
 
         EvenCraftingUi_InitScrollList();
-        EvenCraftingUi_PrintUiButtonHints();
+        EvenCraftingUi_PrintDynamicUiButtonHints();
         EvenCraftingUi_PrintListHeader();
         EvenCraftingUi_PrintListCategory();
         EvenCraftingUi_PrintList();
@@ -513,7 +558,7 @@ static void Task_EvenCraftingUiMainInput(u8 taskId)
         }
 
         EvenCraftingUi_InitScrollList();
-        EvenCraftingUi_PrintUiButtonHints();
+        EvenCraftingUi_PrintDynamicUiButtonHints();
         EvenCraftingUi_PrintListHeader();
         EvenCraftingUi_PrintListCategory();
         EvenCraftingUi_PrintList();
@@ -532,7 +577,7 @@ static void Task_EvenCraftingUiMainInput(u8 taskId)
         }
 
         EvenCraftingUi_InitScrollList();
-        EvenCraftingUi_PrintUiButtonHints();
+        EvenCraftingUi_PrintDynamicUiButtonHints();
         EvenCraftingUi_PrintListHeader();
         EvenCraftingUi_PrintListCategory();
         EvenCraftingUi_PrintList();
@@ -561,7 +606,7 @@ static void Task_EvenCraftingUiMainInput(u8 taskId)
                 EvenCraftingUi_CraftItem(result);
                 PlaySE(ECU_ADD_ITEM_SOUND);
                 EvenCraftingUi_InitScrollList();
-                EvenCraftingUi_PrintUiButtonHints();
+                EvenCraftingUi_PrintDynamicUiButtonHints();
             }
         }
         else
@@ -660,17 +705,26 @@ static void EvenCraftingUi_InitWindows(void)
 
     ScheduleBgCopyTilemapToVram(0);
 
-    FillWindowPixelBuffer(WIN_UI_HINTS, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WIN_UI_HINTS_A, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WIN_UI_HINTS_B, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WIN_UI_HINTS_START, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WIN_UI_HINTS_SELECT, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
     FillWindowPixelBuffer(WIN_LIST_HEADER, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
     FillWindowPixelBuffer(WIN_LIST_CATEGORY, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
     FillWindowPixelBuffer(WIN_LIST, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
 
-    PutWindowTilemap(WIN_UI_HINTS);
+    PutWindowTilemap(WIN_UI_HINTS_A);
+    PutWindowTilemap(WIN_UI_HINTS_B);
+    PutWindowTilemap(WIN_UI_HINTS_START);
+    PutWindowTilemap(WIN_UI_HINTS_SELECT);
     PutWindowTilemap(WIN_LIST_HEADER);
     PutWindowTilemap(WIN_LIST_CATEGORY);
     PutWindowTilemap(WIN_LIST);
 
-    CopyWindowToVram(WIN_UI_HINTS, COPYWIN_FULL);
+    CopyWindowToVram(WIN_UI_HINTS_A, COPYWIN_FULL);
+    CopyWindowToVram(WIN_UI_HINTS_B, COPYWIN_FULL);
+    CopyWindowToVram(WIN_UI_HINTS_START, COPYWIN_FULL);
+    CopyWindowToVram(WIN_UI_HINTS_SELECT, COPYWIN_FULL);
     CopyWindowToVram(WIN_LIST_HEADER, COPYWIN_FULL);
     CopyWindowToVram(WIN_LIST_CATEGORY, COPYWIN_FULL);
     //CopyWindowToVram(WIN_LIST, COPYWIN_FULL);
@@ -687,10 +741,11 @@ static const u8 sText_EvenCraftingUi_LeftTrigger[] = _("{L_BUTTON}");
 static const u8 sText_EvenCraftingUi_StartButton[] = _("{START_BUTTON} Craft");
 static const u8 sText_EvenCraftingUi_SelectButton[] = _("{SELECT_BUTTON} Select mode");
 
-static void EvenCraftingUi_PrintUiButtonHints(void)
+static void EvenCraftingUi_PrintDynamicUiButtonHints(void)
 {
     u8 fontToUse = FONT_SMALL_NARROWER;
-    FillWindowPixelBuffer(WIN_UI_HINTS, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WIN_UI_HINTS_A, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WIN_UI_HINTS_B, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
 
     switch (sEvenCraftingUiState->mode)
     {
@@ -698,7 +753,7 @@ static void EvenCraftingUi_PrintUiButtonHints(void)
             if (sEvenCraftingUiState->hasCraftResult)
             {
                 StringExpandPlaceholders(gStringVar1, sText_EvenCraftingUi_AButtonContinue);
-                AddTextPrinterParameterized4(WIN_UI_HINTS,
+                AddTextPrinterParameterized4(WIN_UI_HINTS_A,
                                              fontToUse,
                                              1, 0, 0, 0,
                                              sEvenCraftingUiWindowFontColors[FONT_BLACK],
@@ -708,7 +763,7 @@ static void EvenCraftingUi_PrintUiButtonHints(void)
             else
             {
                 StringExpandPlaceholders(gStringVar1, sText_EvenCraftingUi_AButtonItem);
-                AddTextPrinterParameterized4(WIN_UI_HINTS,
+                AddTextPrinterParameterized4(WIN_UI_HINTS_A,
                                              fontToUse,
                                              1, 0, 0, 0,
                                              sEvenCraftingUiWindowFontColors[FONT_BLACK],
@@ -718,9 +773,9 @@ static void EvenCraftingUi_PrintUiButtonHints(void)
             if (sEvenCraftingUiState->numItemsAdded == 0)
             {
                 StringExpandPlaceholders(gStringVar2, sText_EvenCraftingUi_BButtonExit);
-                AddTextPrinterParameterized4(WIN_UI_HINTS,
+                AddTextPrinterParameterized4(WIN_UI_HINTS_B,
                                              fontToUse,
-                                             51, 0, 0, 0,
+                                             0, 0, 0, 0,
                                              sEvenCraftingUiWindowFontColors[FONT_BLACK],
                                              TEXT_SKIP_DRAW,
                                              gStringVar2);
@@ -728,9 +783,9 @@ static void EvenCraftingUi_PrintUiButtonHints(void)
             else
             {
                 StringExpandPlaceholders(gStringVar2, sText_EvenCraftingUi_BButtonRemoveItem);
-                AddTextPrinterParameterized4(WIN_UI_HINTS,
+                AddTextPrinterParameterized4(WIN_UI_HINTS_B,
                                              fontToUse,
-                                             51, 0, 0, 0,
+                                             0, 0, 0, 0,
                                              sEvenCraftingUiWindowFontColors[FONT_BLACK],
                                              TEXT_SKIP_DRAW,
                                              gStringVar2);
@@ -740,7 +795,7 @@ static void EvenCraftingUi_PrintUiButtonHints(void)
             if (sEvenCraftingUiState->hasCraftResult)
             {
                 StringExpandPlaceholders(gStringVar1, sText_EvenCraftingUi_AButtonContinue);
-                AddTextPrinterParameterized4(WIN_UI_HINTS,
+                AddTextPrinterParameterized4(WIN_UI_HINTS_A,
                                              fontToUse,
                                              1, 0, 0, 0,
                                              sEvenCraftingUiWindowFontColors[FONT_BLACK],
@@ -750,7 +805,7 @@ static void EvenCraftingUi_PrintUiButtonHints(void)
             else
             {
                 StringExpandPlaceholders(gStringVar1, sText_EvenCraftingUi_AButtonRecipe);
-                AddTextPrinterParameterized4(WIN_UI_HINTS,
+                AddTextPrinterParameterized4(WIN_UI_HINTS_A,
                                              fontToUse,
                                              1, 0, 0, 0,
                                              sEvenCraftingUiWindowFontColors[FONT_BLACK],
@@ -761,30 +816,41 @@ static void EvenCraftingUi_PrintUiButtonHints(void)
                 StringExpandPlaceholders(gStringVar2, sText_EvenCraftingUi_BButtonRemoveItem);
             else
                 StringExpandPlaceholders(gStringVar2, sText_EvenCraftingUi_BButtonExit);
-            AddTextPrinterParameterized4(WIN_UI_HINTS,
+            AddTextPrinterParameterized4(WIN_UI_HINTS_B,
                                          fontToUse,
-                                         51, 0, 0, 0,
+                                         0, 0, 0, 0,
                                          sEvenCraftingUiWindowFontColors[FONT_BLACK],
                                          TEXT_SKIP_DRAW,
                                          gStringVar2);
             break;
     }
+
+    CopyWindowToVram(WIN_UI_HINTS_A, COPYWIN_GFX);
+    CopyWindowToVram(WIN_UI_HINTS_B, COPYWIN_GFX);
+}
+
+static void EvenCraftingUi_PrintFixedUiButtonHints()
+{
+    u8 fontToUse = FONT_SMALL_NARROWER;
+    FillWindowPixelBuffer(WIN_UI_HINTS_START, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WIN_UI_HINTS_SELECT, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+
     StringExpandPlaceholders(gStringVar3, sText_EvenCraftingUi_StartButton);
-    AddTextPrinterParameterized4(WIN_UI_HINTS,
+    AddTextPrinterParameterized4(WIN_UI_HINTS_START,
                                  fontToUse,
-                                 105, 0, 0, 0,
+                                 0, 0, 0, 0,
                                  sEvenCraftingUiWindowFontColors[FONT_BLACK],
                                  TEXT_SKIP_DRAW,
                                  gStringVar3);
     StringExpandPlaceholders(gStringVar4, sText_EvenCraftingUi_SelectButton);
-    AddTextPrinterParameterized4(WIN_UI_HINTS,
+    AddTextPrinterParameterized4(WIN_UI_HINTS_SELECT,
                                  fontToUse,
-                                 160, 0, 0, 0,
+                                 0, 0, 0, 0,
                                  sEvenCraftingUiWindowFontColors[FONT_BLACK],
                                  TEXT_SKIP_DRAW,
                                  gStringVar4);
-
-    CopyWindowToVram(WIN_UI_HINTS, COPYWIN_GFX);
+    CopyWindowToVram(WIN_UI_HINTS_START, COPYWIN_GFX);
+    CopyWindowToVram(WIN_UI_HINTS_SELECT, COPYWIN_GFX);
 }
 
 static void EvenCraftingUi_PrintListHeader(void)
@@ -822,8 +888,8 @@ static void EvenCraftingUi_PrintListCategory(void)
     u8 fontToUse = FONT_NORMAL;
     FillWindowPixelBuffer(WIN_LIST_CATEGORY, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
 
-    StringExpandPlaceholders(gStringVar1, sText_EvenCraftingUi_RightTrigger);
-    StringExpandPlaceholders(gStringVar2, sText_EvenCraftingUi_LeftTrigger);
+    StringExpandPlaceholders(gStringVar1, sText_EvenCraftingUi_LeftTrigger);
+    StringExpandPlaceholders(gStringVar2, sText_EvenCraftingUi_RightTrigger);
 
 
     AddTextPrinterParameterized4(WIN_LIST_CATEGORY,
