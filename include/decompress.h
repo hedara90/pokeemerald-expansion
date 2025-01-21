@@ -8,7 +8,7 @@
 #define PARTIAL_FREQ_MASK   0xC0000000
 
 #define FIRST_LO_MASK   0x7f
-#define CONTINUE_BIT    0x80
+#define CONTINUE_BIT    0x1
 
 #define SMOL_IMAGE_SIZE_MULTIPLIER 16
 

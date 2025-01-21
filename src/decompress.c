@@ -653,8 +653,8 @@ ARM_FUNC __attribute__((noinline, no_reorder)) __attribute__((optimize("-O3"))) 
 
         if (loVec[0] & CONTINUE_BIT)
         {
-            currLength = (loVec[0] & FIRST_LO_MASK) | (loVec[1] << 7);
-            currOffset = loVec[2] & FIRST_LO_MASK;
+            currLength = (loVec[0] >> 1) | (loVec[1] << 7);
+            currOffset = loVec[2] >> 1;
             if (loVec[2] & CONTINUE_BIT)
             {
                 currOffset |= loVec[3] << 7;
@@ -667,8 +667,8 @@ ARM_FUNC __attribute__((noinline, no_reorder)) __attribute__((optimize("-O3"))) 
         }
         else
         {
-            currLength = loVec[0] & FIRST_LO_MASK;
-            currOffset = loVec[1] & FIRST_LO_MASK;
+            currLength = loVec[0] >> 1;
+            currOffset = loVec[1] >> 1;
 
             if (loVec[1] & CONTINUE_BIT)
             {

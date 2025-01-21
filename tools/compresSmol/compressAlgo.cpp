@@ -142,7 +142,7 @@ void ShortCompressionInstruction::buildBytes()
         //  Current pattern either exists earlier in the image
         //  or it's a long run of the same value
         size_t currLength = length;
-        loBytes.push_back(currLength & LO_LOW_BITS_MASK);
+        loBytes.push_back((currLength & LO_LOW_BITS_MASK) << 1);
         currLength = currLength >> LO_NUM_LOW_BITS;
         if (currLength != 0)
         {
@@ -150,7 +150,7 @@ void ShortCompressionInstruction::buildBytes()
             loBytes.push_back(currLength & BYTE_MASK);
         }
         size_t currOffset = offset;
-        loBytes.push_back(currOffset & LO_LOW_BITS_MASK);
+        loBytes.push_back((currOffset & LO_LOW_BITS_MASK) << 1);
         currOffset = currOffset >> LO_NUM_LOW_BITS;
         if (currOffset != 0)
         {
@@ -166,7 +166,7 @@ void ShortCompressionInstruction::buildBytes()
         //  Set LENGTH parameter to 0, and use OFFSET parameter as length
         loBytes.push_back(0);
         size_t currLength = length;
-        loBytes.push_back(currLength & LO_LOW_BITS_MASK);
+        loBytes.push_back((currLength & LO_LOW_BITS_MASK) << 1);
         currLength = currLength >> LO_NUM_LOW_BITS;
         if (currLength != 0)
         {
@@ -282,14 +282,14 @@ std::vector<unsigned short> decodeBytesShort(std::vector<unsigned char> *pLoVec,
     {
         size_t currLength = 0;
         size_t currOffset = 0;
-        currLength += (*pLoVec)[loIndex] & LO_LOW_BITS_MASK;
+        currLength += (*pLoVec)[loIndex] >> 1;
         loIndex++;
         if (((*pLoVec)[loIndex-1] & LO_CONTINUE_BIT) == LO_CONTINUE_BIT)
         {
             currLength += (*pLoVec)[loIndex] << LO_NUM_LOW_BITS;
             loIndex++;
         }
-        currOffset += (*pLoVec)[loIndex] & LO_LOW_BITS_MASK;
+        currOffset += (*pLoVec)[loIndex] >> 1;
         loIndex++;
         if (((*pLoVec)[loIndex-1] & LO_CONTINUE_BIT) == LO_CONTINUE_BIT)
         {
