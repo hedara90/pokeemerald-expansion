@@ -349,35 +349,69 @@ static inline void UnpackFrequencies(const u32 *packedFreqs, u16 *freqs)
     UnpackFrequenciesLoop(packedFreqs, freqs, 2);
 }
 
+extern void CopyTable(u32 *dst, const u32 *src, u32 size, u32 orrVal);
+extern void CopyTableNoOrr(u32 *dst, const u32 *src, u32 size);
+
 // This is a small function, so we can store it in IWRAM for improved performance and don't need to worry about it taking too much precious IWRAM space.
-ARM_FUNC __attribute__((section(".iwram.code"))) __attribute__((noinline)) static void CopyTable(u32 *dst, const u32 *src, u32 size, u32 orrVal)
+static inline void CallCopyTable(u32 *dst, const u32 *src, u32 size, u32 orrVal)
 {
-    for (u32 i = 0; i < size; i++) {
-        *dst++ = (*src++) | orrVal;
-    }
+    register u32 *_dst asm("r0") = dst;
+    register const u32 *_src asm("r1") = src;
+    register u32 _size asm("r2") = size;
+    register u32 _orrVal asm("r3") = orrVal;
+    __asm__ __volatile__("mov\tlr, %4\n\t.2byte\t0xF800" : "+r" (_dst), "+r" (_src), "+r" (_size), "+r" (_orrVal) : "l" (CopyTable) : "ip", "lr", "cc");
 }
+
+static inline void CallCopyTableNoOrr(u32 *dst, const u32 *src, u32 size)
+{
+    register u32 *_dst asm("r0") = dst;
+    register const u32 *_src asm("r1") = src;
+    register u32 _size asm("r2") = size;
+    __asm__ __volatile__("mov\tlr, %3\n\t.2byte\t0xF800" : "+r" (_dst), "+r" (_src), "+r" (_size) : "l" (CopyTableNoOrr) : "r3", "ip", "lr", "cc");
+}
+
 
 //  Build the tANS decompression table from the specified frequencies and the precomputed helper struct
 __attribute__((optimize("-O3"))) static void BuildDecompressionTable(const u32 *packedFreqs, u32 *table)
 {
     u16 freqs[16];
-
+    const u32 *srcTemplate;
     UnpackFrequencies(packedFreqs, freqs);
 
-    for (u8 i = 0; i < 16; i++)
-    {
-        const u32 *srcTemplate;
+    switch (freqs[0]) {
+    case 0:
+        break;
+    default:
+        srcTemplate = &sYkTemplate[freqs[0]];
+        CallCopyTableNoOrr(table, srcTemplate, freqs[0]);
+        table += freqs[0];
+        srcTemplate += freqs[0];
+        break;
+    case 1:
+        srcTemplate = &sYkTemplate[1];
+        REP(0, 1, *table++ = *srcTemplate++;)
+        break;
+    case 2:
+        srcTemplate = &sYkTemplate[2];
+        REP(0, 2, *table++ = (*srcTemplate++);)
+        break;
+    case 3:
+        srcTemplate = &sYkTemplate[3];
+        REP(0, 3, *table++ = (*srcTemplate++);)
+        break;
+    }
 
+    for (u32 i = 1; i < 16; i++)
+    {
         switch (freqs[i]) {
         case 0:
             break;
-        default: {
+        default:
             srcTemplate = &sYkTemplate[freqs[i]];
-            CopyTable(table, srcTemplate, freqs[i], i << 3);
+            CallCopyTable(table, srcTemplate, freqs[i], i << 3);
             table += freqs[i];
             srcTemplate += freqs[i];
             break;
-        }
         case 1:
             srcTemplate = &sYkTemplate[1];
             REP(0, 1, *table++ = *srcTemplate++ | (i << 3);)
@@ -398,12 +432,26 @@ static IWRAM_DATA u8 sBitIndex = 0;
 static IWRAM_DATA const u32 *sDataPtr = 0;
 static IWRAM_DATA u32 sCurrState = 0;
 
-extern void FastUnsafeCopy32(void *, const void *, u32 size);
+extern void FastUnsafeCopy40(void *dst, const void *src, u32 size);
+
+// This emits code to put all of the arguments in r0..r2 as well as
+// the destination address in lr
+// then it emits `.2byte 0xF800` which is essentially `bl lr`
+#define CallFastUnsafeCopy40(dst, src, size) do {                            \
+    register u32 *_dst asm("r0") = dst;                                      \
+    register const u32 *_src asm("r1") = src;                                \
+    register u32 _size asm("r2") = size;                                     \
+    register void *_func asm("r3") = FastUnsafeCopy40;                       \
+    __asm__ __volatile__("mov\tlr, %3\n\t.2byte\t0xF800"                     \
+    : "+r" (_dst), "+r" (_src), "+r" (_size), "+r" (_func)                   \
+    :                                                                        \
+    : "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "lr", "cc");  \
+} while(0);
 
 //  Dark Egg magic
 static inline void CopyFuncToIwram(void *funcBuffer, const void *funcStartAddress, const void *funcEndAdress)
 {
-    FastUnsafeCopy32(funcBuffer, funcStartAddress, funcEndAdress - funcStartAddress);
+    CallFastUnsafeCopy40(funcBuffer, funcStartAddress, funcEndAdress - funcStartAddress);
 }
 
 // The reason for macros and unrolling the loops stems from the following:
@@ -508,10 +556,24 @@ LOOP_STORE:
 }
 
 //  Dark Egg magic
+//  for now this has to stay because we need to figure out where DecodeLOtANSLoop ends
 ARM_FUNC __attribute__((no_reorder)) static void SwitchToArmCallLOtANS(const u32 *data, u32 *ykTable, void *resultVec, void *resultVecEnd, void (*decodeFunction)(const u32 *data, u32 *ykTable, void *resultVec, void *resultVecEnd))
 {
     decodeFunction(data, ykTable, resultVec, resultVecEnd);
 }
+
+#define CallDecodeLOtANSLoop(data, ykTable, resultVec, resultVecEnd) do {    \
+    u32 funcBuffer[350];                                                     \
+    CopyFuncToIwram(funcBuffer, DecodeLOtANSLoop, SwitchToArmCallLOtANS);    \
+    register const u32 *_data asm("r0") = data;                              \
+    register u32 *_ykTable asm("r1") = ykTable;                              \
+    register void *_resultVec asm("r2") = resultVec;                         \
+    register void *_resultVecEnd asm("r3") = resultVecEnd;                   \
+    __asm__ __volatile__("mov\tlr, %4\n\t.2byte\t0xF800" :                   \
+    "+r" (_data),  "+r" (_ykTable), "+r" (_resultVec), "+r" (_resultVecEnd): \
+    "l" (funcBuffer):                                                        \
+    "lr", "cc", "memory");                                                   \
+} while(0);
 
 //  Function that decodes tANS encoded LO data, resulting data is u8 values
 static void DecodeLOtANS(const u32 *data, const u32 *pFreqs, u8 *resultVec, u32 count)
@@ -521,11 +583,7 @@ static void DecodeLOtANS(const u32 *data, const u32 *pFreqs, u8 *resultVec, u32 
     // We want to store in packs of 2, so count needs to be divisible by 2
     u32 remainingCount = count % 2;
 
-    u32 funcBuffer[400];
-
-    CopyFuncToIwram(funcBuffer, DecodeLOtANSLoop, SwitchToArmCallLOtANS);
-    SwitchToArmCallLOtANS(data, sWorkingYkTable, resultVec, &resultVec[count - remainingCount], (void *) funcBuffer);
-
+    CallDecodeLOtANSLoop(data, sWorkingYkTable, resultVec, &resultVec[count - remainingCount]);
     if (remainingCount)
     {
         u32 currBits = *sDataPtr;
@@ -588,19 +646,31 @@ ARM_FUNC __attribute__((noinline, no_reorder)) __attribute__((optimize("-O3"))) 
     sDataPtr = data - 1;
 }
 
+//  Dark Egg magic
+//  for now this has to stay because we need to figure out where DecodeSymtANSLoop ends
 ARM_FUNC __attribute__((no_reorder)) static void SwitchToArmCallDecodeSymtANS(const u32 *data, u32 *ykTable, u16 *resultVec, u16 *resultVecEnd, void (*decodeFunction)(const u32 *data, u32 *ykTable, u16 *resultVec, u16 *resultVecEnd))
 {
     decodeFunction(data, ykTable, resultVec, resultVecEnd);
 }
 
+#define CallDecodeSymtANSLoop(data, ykTable, resultVec, resultVecEnd) do {           \
+    u32 funcBuffer[300];                                                             \
+    CopyFuncToIwram(funcBuffer, DecodeSymtANSLoop, SwitchToArmCallDecodeSymtANS);    \
+    register const u32 *_data asm("r0") = data;                                      \
+    register u32 *_ykTable asm("r1") = ykTable;                                      \
+    register void *_resultVec asm("r2") = resultVec;                                 \
+    register void *_resultVecEnd asm("r3") = resultVecEnd;                           \
+    __asm__ __volatile__("mov\tlr, %4\n\t.2byte\t0xF800" :                           \
+    "+r" (_data),  "+r" (_ykTable), "+r" (_resultVec), "+r" (_resultVecEnd):         \
+    "l" (funcBuffer):                                                                \
+    "lr", "cc", "memory");                                                           \
+} while(0);
+
+
 static void DecodeSymtANS(const u32 *data, const u32 *pFreqs, u16 *resultVec, u32 count)
 {
     BuildDecompressionTable(pFreqs, sWorkingYkTable);
-
-    u32 funcBuffer[300];
-    // CopyFuncToIwram(funcBuffer, DecodeSymtANSLoop, SwitchToArmCallDecodeSymtANS);
-    CopyFuncToIwram(funcBuffer, DecodeLOtANSLoop, SwitchToArmCallLOtANS);
-    SwitchToArmCallDecodeSymtANS(data, sWorkingYkTable, resultVec, &resultVec[count], (void *) funcBuffer);
+    CallDecodeLOtANSLoop(data, sWorkingYkTable, resultVec, &resultVec[count]);
 }
 
 #define ANS_LOOP_MAIN(nibble)   \
@@ -769,6 +839,19 @@ ARM_FUNC __attribute__((no_reorder)) static u32 SwitchToArmCallSymDeltaANS(const
     return decodeFunction(data, ykTable, resultVec, resultVecEnd);
 }
 
+#define CallDecodeSymDeltatANSLoop(data, ykTable, resultVec, resultVecEnd) do {           \
+    u32 funcBuffer[450];                                                             \
+    CopyFuncToIwram(funcBuffer, DecodeSymDeltatANSLoop, SwitchToArmCallSymDeltaANS); \
+    register const u32 *_data asm("r0") = data;                                      \
+    register u32 *_ykTable asm("r1") = ykTable;                                      \
+    register void *_resultVec asm("r2") = resultVec;                                 \
+    register void *_resultVecEnd asm("r3") = resultVecEnd;                           \
+    __asm__ __volatile__("mov\tlr, %4\n\t.2byte\t0xF800" :                           \
+    "+r" (_data),  "+r" (_ykTable), "+r" (_resultVec), "+r" (_resultVecEnd):         \
+    "l" (funcBuffer):                                                                \
+    "lr", "cc", "memory");                                                           \
+} while(0);
+
 static void DecodeSymDeltatANS(const u32 *data, const u32 *pFreqs, u16 *resultVec, u32 count)
 {
     BuildDecompressionTable(pFreqs, sWorkingYkTable);
@@ -778,6 +861,8 @@ static void DecodeSymDeltatANS(const u32 *data, const u32 *pFreqs, u16 *resultVe
 
     u32 funcBuffer[450];
     CopyFuncToIwram(funcBuffer, DecodeSymDeltatANSLoop, SwitchToArmCallSymDeltaANS);
+
+    // My current inline asm implementation does not support return values
     u32 currSymbol = SwitchToArmCallSymDeltaANS(data, sWorkingYkTable, resultVec, &resultVec[count - remainingCount], (void *) funcBuffer);
 
     if (remainingCount)
@@ -929,13 +1014,23 @@ ARM_FUNC __attribute__((no_reorder)) static void SwitchToArmCallDecodeInstructio
     decodeFunction(headerLoSize, loVec, symVec, dest);
 }
 
+#define CallDecodeInstructions(headerLoSize, loVec, symVec, dest) do {                  \
+    u32 funcBuffer[350];                                                                \
+    CopyFuncToIwram(funcBuffer, DecodeInstructions, SwitchToArmCallDecodeInstructions); \
+    register u32 _headerLoSize asm("r0") = headerLoSize;                                \
+    register const u8 *_loVec asm("r1") = loVec;                                              \
+    register const u16 *_symVec asm("r2") = symVec;                                           \
+    register void *_dest asm("r3") = dest;                                              \
+    __asm__ __volatile__("mov\tlr, %4\n\t.2byte\t0xF800" :                              \
+    "+r" (_headerLoSize),  "+r" (_loVec), "+r" (_symVec), "+r" (_dest):                 \
+    "l" (funcBuffer):                                                                   \
+    "lr", "cc", "memory");                                                              \
+} while(0);
+
 //  Dark Egg magic
 static void DecodeInstructionsIwram(u32 headerLoSize, const u8 *loVec, const u16 *symVec, void *dest)
 {
-    u32 funcBuffer[350];
-
-    CopyFuncToIwram(funcBuffer, DecodeInstructions, SwitchToArmCallDecodeInstructions);
-    SwitchToArmCallDecodeInstructions(headerLoSize, loVec, symVec, dest, (void *) funcBuffer);
+    CallDecodeInstructions(headerLoSize, loVec, symVec, dest);
 }
 
 //  Entrance point for smol compressed data

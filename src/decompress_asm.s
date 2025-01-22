@@ -4,21 +4,60 @@
     .section .iwram.code
     .align 2
 
-.global FastUnsafeCopy32
-.type FastUnsafeCopy32, %function
+.macro interwork_magic
+    .word 0xe3104778
+.endm
+
+.global FastUnsafeCopy40
+.type FastUnsafeCopy40, %function
     
-    @ Word aligned, 32-byte copy
-    @ This function WILL overwrite your buffer, so make sure it is at least 32 bytes larger than the desired size.
-FastUnsafeCopy32:
-    push    {r4-r10}
+    @ Word aligned, 40-byte copy
+    @ This function WILL overwrite your buffer, so make sure it is at least 44 bytes larger than the desired size.
+FastUnsafeCopy40:
+    interwork_magic
+    ldr r3, =0xe3104778
+    str r3, [r0], #4
 .Lloop_32:
-    ldmia r1!, {r3-r10}
-    stmia r0!, {r3-r10}
-    subs    r2, r2, #32
+    ldmia r1!, {r3-r12}
+    stmia r0!, {r3-r12}
+    subs    r2, r2, #40
     bgt     .Lloop_32
-    pop     {r4-r10}
     bx    lr
-    
+
+.global CopyTable
+.type CopyTable, %function
+CopyTable:
+	interwork_magic
+    add	r2, r0, r2, lsl #2
+.rept 3
+	ldr	ip, [r1], #4
+	orr	ip, ip, r3
+	str	ip, [r0], #4
+.endr 
+	
+.Lloop_Ct:
+	ldr	ip, [r1], #4
+	orr	ip, ip, r3
+	str	ip, [r0], #4
+	cmp	r2, r0
+	bne	.Lloop_Ct
+    bx lr
+
+.global CopyTableNoOrr
+.type CopyTableNoOrr, %function
+CopyTableNoOrr:
+	interwork_magic
+    add	r2, r0, r2, lsl #2
+    ldmia r1!, {r3, ip}
+    stmia r0!, {r3, ip}
+	ldr	ip, [r1], #4
+	str	ip, [r0], #4
+.Lloop_CtNoOrr:
+	ldr	ip, [r1], #4
+	str	ip, [r0], #4
+	cmp	r2, r0
+	bne	.Lloop_CtNoOrr
+    bx lr
     
 @ Credit to:  luckytyphlosion as it's his implementation
     
