@@ -12,8 +12,7 @@
 
 #define SMOL_IMAGE_SIZE_MULTIPLIER 16
 
-
-extern u8 ALIGNED(4) gDecompressionBuffer[0x4000];
+#define MAX_DECOMPRESSION_BUFFER_SIZE 0x4000
 
 struct LZ77Header {
     u32 lz77IdBits:5;
@@ -67,27 +66,10 @@ enum CompressionMode {
     MODE_LZ77 = 16,
 };
 
-extern struct DecodeYK ykTemplate[2*TANS_TABLE_SIZE];
-
-void UnpackFrequencies(const u32 *packedFreqs, u32 *freqs);
-
 void DecompressDataVram(const u32 *src, void *dest);
 void DecompressDataWram(const u32 *src, void *dest);
 
-//  For decompressing a single part of a multi-part spritesheet
-//void DecompressSubFrame(const u32 *src, void *dest, u32 frameId);
-
 void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *dest);
-
-void BuildDecompressionTable(const u32 *freqs, struct DecodeYK *ykTable, u32 *symbolTable);
-
-void DecodeLOtANS(const u32 *data, const u32 *pFreqs, u8 *resultVec, u32 count);
-
-void DecodeSymtANS(const u32 *data, const u32 *pFreqs, u16 *resultVec, u32 count);
-
-void DecodeSymDeltatANS(const u32 *data, const u32 *pFreqs, u16 *resultVec, u32 count);
-
-void DecodeInstructions(u32 headerLoSize, u8 *loVec, u16 *symVec, void *dest);
 
 bool32 isModeLoEncoded(enum CompressionMode mode);
 bool32 isModeSymEncoded(enum CompressionMode mode);
@@ -99,13 +81,13 @@ void LZDecompressVram(const u32 *src, void *dest);
 
 u32 IsLZ77Data(const void *ptr, u32 minSize, u32 maxSize);
 
-u16 LoadCompressedSpriteSheet(const struct CompressedSpriteSheet *src);
-u16 LoadCompressedSpriteSheetByTemplate(const struct SpriteTemplate *template, s32 offset);
-void LoadCompressedSpriteSheetOverrideBuffer(const struct CompressedSpriteSheet *src, void *buffer);
+u32 LoadCompressedSpriteSheet(const struct CompressedSpriteSheet *src);
+u32 LoadCompressedSpriteSheetByTemplate(const struct SpriteTemplate *template, s32 offset);
+u32 LoadCompressedSpriteSheetOverrideBuffer(const struct CompressedSpriteSheet *src, void *buffer);
 bool8 LoadCompressedSpriteSheetUsingHeap(const struct CompressedSpriteSheet *src);
 
-void LoadCompressedSpritePalette(const struct CompressedSpritePalette *src);
-void LoadCompressedSpritePaletteWithTag(const u32 *pal, u16 tag);
+u32 LoadCompressedSpritePalette(const struct CompressedSpritePalette *src);
+u32 LoadCompressedSpritePaletteWithTag(const u32 *pal, u16 tag);
 void LoadCompressedSpritePaletteOverrideBuffer(const struct CompressedSpritePalette *src, void *buffer);
 bool8 LoadCompressedSpritePaletteUsingHeap(const struct CompressedSpritePalette *src);
 

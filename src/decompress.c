@@ -5,138 +5,157 @@
 #include "pokemon.h"
 #include "pokemon_sprite_visualizer.h"
 #include "text.h"
+#include "menu.h"
 
-EWRAM_DATA ALIGNED(4) u8 gDecompressionBuffer[0x4000] = {0};
+#define TABLE_READ_K(tableVal)((tableVal & 7))
+#define TABLE_READ_SYMBOL(tableVal)((tableVal & 0xFF) >> 3)
+#define TABLE_READ_Y(tableVal)((tableVal >> 8) & 0xFF)
+#define TABLE_READ_MASK(tableVal)((tableVal >> 16))
 
-static const struct DecodeYK sYkTemplate[2*TANS_TABLE_SIZE] = {
-    [0] = {0, 0},
-    [1] = {1<<6, 6},
-    [2] = {2<<5, 5},
-    [3] = {3<<5, 5},
-    [4] = {4<<4, 4},
-    [5] = {5<<4, 4},
-    [6] = {6<<4, 4},
-    [7] = {7<<4, 4},
-    [8] = {8<<3, 3},
-    [9] = {9<<3, 3},
-    [10] = {10<<3, 3},
-    [11] = {11<<3, 3},
-    [12] = {12<<3, 3},
-    [13] = {13<<3, 3},
-    [14] = {14<<3, 3},
-    [15] = {15<<3, 3},
-    [16] = {16<<2, 2},
-    [17] = {17<<2, 2},
-    [18] = {18<<2, 2},
-    [19] = {19<<2, 2},
-    [20] = {20<<2, 2},
-    [21] = {21<<2, 2},
-    [22] = {22<<2, 2},
-    [23] = {23<<2, 2},
-    [24] = {24<<2, 2},
-    [25] = {25<<2, 2},
-    [26] = {26<<2, 2},
-    [27] = {27<<2, 2},
-    [28] = {28<<2, 2},
-    [29] = {29<<2, 2},
-    [30] = {30<<2, 2},
-    [31] = {31<<2, 2},
-    [32] = {32<<1, 1},
-    [33] = {33<<1, 1},
-    [34] = {34<<1, 1},
-    [35] = {35<<1, 1},
-    [36] = {36<<1, 1},
-    [37] = {37<<1, 1},
-    [38] = {38<<1, 1},
-    [39] = {39<<1, 1},
-    [40] = {40<<1, 1},
-    [41] = {41<<1, 1},
-    [42] = {42<<1, 1},
-    [43] = {43<<1, 1},
-    [44] = {44<<1, 1},
-    [45] = {45<<1, 1},
-    [46] = {46<<1, 1},
-    [47] = {47<<1, 1},
-    [48] = {48<<1, 1},
-    [49] = {49<<1, 1},
-    [50] = {50<<1, 1},
-    [51] = {51<<1, 1},
-    [52] = {52<<1, 1},
-    [53] = {53<<1, 1},
-    [54] = {54<<1, 1},
-    [55] = {55<<1, 1},
-    [56] = {56<<1, 1},
-    [57] = {57<<1, 1},
-    [58] = {58<<1, 1},
-    [59] = {59<<1, 1},
-    [60] = {60<<1, 1},
-    [61] = {61<<1, 1},
-    [62] = {62<<1, 1},
-    [63] = {63<<1, 1},
-    [64] = {64, 0},
-    [65] = {65, 0},
-    [66] = {66, 0},
-    [67] = {67, 0},
-    [68] = {68, 0},
-    [69] = {69, 0},
-    [70] = {70, 0},
-    [71] = {71, 0},
-    [72] = {72, 0},
-    [73] = {73, 0},
-    [74] = {74, 0},
-    [75] = {75, 0},
-    [76] = {76, 0},
-    [77] = {77, 0},
-    [78] = {78, 0},
-    [79] = {79, 0},
-    [80] = {80, 0},
-    [81] = {81, 0},
-    [82] = {82, 0},
-    [83] = {83, 0},
-    [84] = {84, 0},
-    [85] = {85, 0},
-    [86] = {86, 0},
-    [87] = {87, 0},
-    [88] = {88, 0},
-    [89] = {89, 0},
-    [90] = {90, 0},
-    [91] = {91, 0},
-    [92] = {92, 0},
-    [93] = {93, 0},
-    [94] = {94, 0},
-    [95] = {95, 0},
-    [96] = {96, 0},
-    [97] = {97, 0},
-    [98] = {98, 0},
-    [99] = {99, 0},
-    [100] = {100, 0},
-    [101] = {101, 0},
-    [102] = {102, 0},
-    [103] = {103, 0},
-    [104] = {104, 0},
-    [105] = {105, 0},
-    [106] = {106, 0},
-    [107] = {107, 0},
-    [108] = {108, 0},
-    [109] = {109, 0},
-    [110] = {110, 0},
-    [111] = {111, 0},
-    [112] = {112, 0},
-    [113] = {113, 0},
-    [114] = {114, 0},
-    [115] = {115, 0},
-    [116] = {116, 0},
-    [117] = {117, 0},
-    [118] = {118, 0},
-    [119] = {119, 0},
-    [120] = {120, 0},
-    [121] = {121, 0},
-    [122] = {122, 0},
-    [123] = {123, 0},
-    [124] = {124, 0},
-    [125] = {125, 0},
-    [126] = {126, 0},
-    [127] = {127, 0},
+/*
+Layout is the following:
+u32 kVal:3;
+u32 symbol:5; // Set in BuildDecompressionTable
+u32 yVal:8;
+u32 mask:8;
+*/
+
+#define SET_TABLE_ENTRY(k, y, mask)(((k) & 7) | ((y) << 8) | ((mask) << 16))
+
+static IWRAM_DATA u32 sWorkingYkTable_Lo[TANS_TABLE_SIZE] = {0};
+static IWRAM_DATA u32 sWorkingYkTable_Sym[TANS_TABLE_SIZE] = {0};
+
+// Helper struct to build the tANS decode tables without having to do calculations at run-time
+// Mask Table is 0, 1, 3, 7, 15, 31, 63.
+static const u32 sYkTemplate[2*TANS_TABLE_SIZE] = {
+    [0] = 0,
+    [1] = SET_TABLE_ENTRY(6, (1 << 6) - 64, 63),
+    [2] = SET_TABLE_ENTRY(5, (2 << 5) - 64, 31),
+    [3] = SET_TABLE_ENTRY(5, (3 << 5) - 64, 31),
+    [4] = SET_TABLE_ENTRY(4, (4 << 4) - 64, 15),
+    [5] = SET_TABLE_ENTRY(4, (5 << 4) - 64, 15),
+    [6] = SET_TABLE_ENTRY(4, (6 << 4) - 64, 15),
+    [7] = SET_TABLE_ENTRY(4, (7 << 4) - 64, 15),
+    [8] = SET_TABLE_ENTRY(3, (8 << 3) - 64, 7),
+    [9] = SET_TABLE_ENTRY(3, (9 << 3) - 64, 7),
+    [10] = SET_TABLE_ENTRY(3, (10 << 3) - 64, 7),
+    [11] = SET_TABLE_ENTRY(3, (11 << 3) - 64, 7),
+    [12] = SET_TABLE_ENTRY(3, (12 << 3) - 64, 7),
+    [13] = SET_TABLE_ENTRY(3, (13 << 3) - 64, 7),
+    [14] = SET_TABLE_ENTRY(3, (14 << 3) - 64, 7),
+    [15] = SET_TABLE_ENTRY(3, (15 << 3) - 64, 7),
+    [16] = SET_TABLE_ENTRY(2, (16 << 2) - 64, 3),
+    [17] = SET_TABLE_ENTRY(2, (17 << 2) - 64, 3),
+    [18] = SET_TABLE_ENTRY(2, (18 << 2) - 64, 3),
+    [19] = SET_TABLE_ENTRY(2, (19 << 2) - 64, 3),
+    [20] = SET_TABLE_ENTRY(2, (20 << 2) - 64, 3),
+    [21] = SET_TABLE_ENTRY(2, (21 << 2) - 64, 3),
+    [22] = SET_TABLE_ENTRY(2, (22 << 2) - 64, 3),
+    [23] = SET_TABLE_ENTRY(2, (23 << 2) - 64, 3),
+    [24] = SET_TABLE_ENTRY(2, (24 << 2) - 64, 3),
+    [25] = SET_TABLE_ENTRY(2, (25 << 2) - 64, 3),
+    [26] = SET_TABLE_ENTRY(2, (26 << 2) - 64, 3),
+    [27] = SET_TABLE_ENTRY(2, (27 << 2) - 64, 3),
+    [28] = SET_TABLE_ENTRY(2, (28 << 2) - 64, 3),
+    [29] = SET_TABLE_ENTRY(2, (29 << 2) - 64, 3),
+    [30] = SET_TABLE_ENTRY(2, (30 << 2) - 64, 3),
+    [31] = SET_TABLE_ENTRY(2, (31 << 2) - 64, 3),
+    [32] = SET_TABLE_ENTRY(1, (32 << 1) - 64, 1),
+    [33] = SET_TABLE_ENTRY(1, (33 << 1) - 64, 1),
+    [34] = SET_TABLE_ENTRY(1, (34 << 1) - 64, 1),
+    [35] = SET_TABLE_ENTRY(1, (35 << 1) - 64, 1),
+    [36] = SET_TABLE_ENTRY(1, (36 << 1) - 64, 1),
+    [37] = SET_TABLE_ENTRY(1, (37 << 1) - 64, 1),
+    [38] = SET_TABLE_ENTRY(1, (38 << 1) - 64, 1),
+    [39] = SET_TABLE_ENTRY(1, (39 << 1) - 64, 1),
+    [40] = SET_TABLE_ENTRY(1, (40 << 1) - 64, 1),
+    [41] = SET_TABLE_ENTRY(1, (41 << 1) - 64, 1),
+    [42] = SET_TABLE_ENTRY(1, (42 << 1) - 64, 1),
+    [43] = SET_TABLE_ENTRY(1, (43 << 1) - 64, 1),
+    [44] = SET_TABLE_ENTRY(1, (44 << 1) - 64, 1),
+    [45] = SET_TABLE_ENTRY(1, (45 << 1) - 64, 1),
+    [46] = SET_TABLE_ENTRY(1, (46 << 1) - 64, 1),
+    [47] = SET_TABLE_ENTRY(1, (47 << 1) - 64, 1),
+    [48] = SET_TABLE_ENTRY(1, (48 << 1) - 64, 1),
+    [49] = SET_TABLE_ENTRY(1, (49 << 1) - 64, 1),
+    [50] = SET_TABLE_ENTRY(1, (50 << 1) - 64, 1),
+    [51] = SET_TABLE_ENTRY(1, (51 << 1) - 64, 1),
+    [52] = SET_TABLE_ENTRY(1, (52 << 1) - 64, 1),
+    [53] = SET_TABLE_ENTRY(1, (53 << 1) - 64, 1),
+    [54] = SET_TABLE_ENTRY(1, (54 << 1) - 64, 1),
+    [55] = SET_TABLE_ENTRY(1, (55 << 1) - 64, 1),
+    [56] = SET_TABLE_ENTRY(1, (56 << 1) - 64, 1),
+    [57] = SET_TABLE_ENTRY(1, (57 << 1) - 64, 1),
+    [58] = SET_TABLE_ENTRY(1, (58 << 1) - 64, 1),
+    [59] = SET_TABLE_ENTRY(1, (59 << 1) - 64, 1),
+    [60] = SET_TABLE_ENTRY(1, (60 << 1) - 64, 1),
+    [61] = SET_TABLE_ENTRY(1, (61 << 1) - 64, 1),
+    [62] = SET_TABLE_ENTRY(1, (62 << 1) - 64, 1),
+    [63] = SET_TABLE_ENTRY(1, (63 << 1) - 64, 1),
+    [64] = SET_TABLE_ENTRY(0, 64 - 64, 0),
+    [65] = SET_TABLE_ENTRY(0, 65 - 64, 0),
+    [66] = SET_TABLE_ENTRY(0, 66 - 64, 0),
+    [67] = SET_TABLE_ENTRY(0, 67 - 64, 0),
+    [68] = SET_TABLE_ENTRY(0, 68 - 64, 0),
+    [69] = SET_TABLE_ENTRY(0, 69 - 64, 0),
+    [70] = SET_TABLE_ENTRY(0, 70 - 64, 0),
+    [71] = SET_TABLE_ENTRY(0, 71 - 64, 0),
+    [72] = SET_TABLE_ENTRY(0, 72 - 64, 0),
+    [73] = SET_TABLE_ENTRY(0, 73 - 64, 0),
+    [74] = SET_TABLE_ENTRY(0, 74 - 64, 0),
+    [75] = SET_TABLE_ENTRY(0, 75 - 64, 0),
+    [76] = SET_TABLE_ENTRY(0, 76 - 64, 0),
+    [77] = SET_TABLE_ENTRY(0, 77 - 64, 0),
+    [78] = SET_TABLE_ENTRY(0, 78 - 64, 0),
+    [79] = SET_TABLE_ENTRY(0, 79 - 64, 0),
+    [80] = SET_TABLE_ENTRY(0, 80 - 64, 0),
+    [81] = SET_TABLE_ENTRY(0, 81 - 64, 0),
+    [82] = SET_TABLE_ENTRY(0, 82 - 64, 0),
+    [83] = SET_TABLE_ENTRY(0, 83 - 64, 0),
+    [84] = SET_TABLE_ENTRY(0, 84 - 64, 0),
+    [85] = SET_TABLE_ENTRY(0, 85 - 64, 0),
+    [86] = SET_TABLE_ENTRY(0, 86 - 64, 0),
+    [87] = SET_TABLE_ENTRY(0, 87 - 64, 0),
+    [88] = SET_TABLE_ENTRY(0, 88 - 64, 0),
+    [89] = SET_TABLE_ENTRY(0, 89 - 64, 0),
+    [90] = SET_TABLE_ENTRY(0, 90 - 64, 0),
+    [91] = SET_TABLE_ENTRY(0, 91 - 64, 0),
+    [92] = SET_TABLE_ENTRY(0, 92 - 64, 0),
+    [93] = SET_TABLE_ENTRY(0, 93 - 64, 0),
+    [94] = SET_TABLE_ENTRY(0, 94 - 64, 0),
+    [95] = SET_TABLE_ENTRY(0, 95 - 64, 0),
+    [96] = SET_TABLE_ENTRY(0, 96 - 64, 0),
+    [97] = SET_TABLE_ENTRY(0, 97 - 64, 0),
+    [98] = SET_TABLE_ENTRY(0, 98 - 64, 0),
+    [99] = SET_TABLE_ENTRY(0, 99 - 64, 0),
+    [100] = SET_TABLE_ENTRY(0, 100 - 64, 0),
+    [101] = SET_TABLE_ENTRY(0, 101 - 64, 0),
+    [102] = SET_TABLE_ENTRY(0, 102 - 64, 0),
+    [103] = SET_TABLE_ENTRY(0, 103 - 64, 0),
+    [104] = SET_TABLE_ENTRY(0, 104 - 64, 0),
+    [105] = SET_TABLE_ENTRY(0, 105 - 64, 0),
+    [106] = SET_TABLE_ENTRY(0, 106 - 64, 0),
+    [107] = SET_TABLE_ENTRY(0, 107 - 64, 0),
+    [108] = SET_TABLE_ENTRY(0, 108 - 64, 0),
+    [109] = SET_TABLE_ENTRY(0, 109 - 64, 0),
+    [110] = SET_TABLE_ENTRY(0, 110 - 64, 0),
+    [111] = SET_TABLE_ENTRY(0, 111 - 64, 0),
+    [112] = SET_TABLE_ENTRY(0, 112 - 64, 0),
+    [113] = SET_TABLE_ENTRY(0, 113 - 64, 0),
+    [114] = SET_TABLE_ENTRY(0, 114 - 64, 0),
+    [115] = SET_TABLE_ENTRY(0, 115 - 64, 0),
+    [116] = SET_TABLE_ENTRY(0, 116 - 64, 0),
+    [117] = SET_TABLE_ENTRY(0, 117 - 64, 0),
+    [118] = SET_TABLE_ENTRY(0, 118 - 64, 0),
+    [119] = SET_TABLE_ENTRY(0, 119 - 64, 0),
+    [120] = SET_TABLE_ENTRY(0, 120 - 64, 0),
+    [121] = SET_TABLE_ENTRY(0, 121 - 64, 0),
+    [122] = SET_TABLE_ENTRY(0, 122 - 64, 0),
+    [123] = SET_TABLE_ENTRY(0, 123 - 64, 0),
+    [124] = SET_TABLE_ENTRY(0, 124 - 64, 0),
+    [125] = SET_TABLE_ENTRY(0, 125 - 64, 0),
+    [126] = SET_TABLE_ENTRY(0, 126 - 64, 0),
+    [127] = SET_TABLE_ENTRY(0, 127 - 64, 0),
 };
 
 void LZDecompressWram(const u32 *src, void *dest)
@@ -171,73 +190,77 @@ u32 IsLZ77Data(const void *ptr, u32 minSize, u32 maxSize)
     return 0;
 }
 
-u16 LoadCompressedSpriteSheet(const struct CompressedSpriteSheet *src)
+static inline u32 DoLoadCompressedSpriteSheet(const struct CompressedSpriteSheet *src, void *buffer)
 {
     struct SpriteSheet dest;
 
-    LZDecompressWram(src->data, gDecompressionBuffer);
-    dest.data = gDecompressionBuffer;
+    dest.data = buffer;
     dest.size = src->size;
     dest.tag = src->tag;
     return LoadSpriteSheet(&dest);
 }
 
+u32 LoadCompressedSpriteSheet(const struct CompressedSpriteSheet *src)
+{
+    void *buffer = malloc_and_decompress(src->data, NULL);
+    u32 ret = DoLoadCompressedSpriteSheet(src, buffer);
+    Free(buffer);
+
+    return ret;
+}
+
+u32 LoadCompressedSpriteSheetOverrideBuffer(const struct CompressedSpriteSheet *src, void *buffer)
+{
+    LZDecompressWram(src->data, buffer);
+    return DoLoadCompressedSpriteSheet(src, buffer);
+}
+
 // This can be used for either compressed or uncompressed sprite sheets
-u16 LoadCompressedSpriteSheetByTemplate(const struct SpriteTemplate *template, s32 offset)
+u32 LoadCompressedSpriteSheetByTemplate(const struct SpriteTemplate *template, s32 offset)
 {
     struct SpriteTemplate myTemplate;
     struct SpriteFrameImage myImage;
     u32 size;
 
     // Check for LZ77 header and read uncompressed size, or fallback if not compressed (zero size)
-    if ((size = IsLZ77Data(template->images->data, TILE_SIZE_4BPP, sizeof(gDecompressionBuffer))) == 0)
+    if ((size = IsLZ77Data(template->images->data, TILE_SIZE_4BPP, MAX_DECOMPRESSION_BUFFER_SIZE)) == 0)
         return LoadSpriteSheetByTemplate(template, 0, offset);
 
-    LZDecompressWram(template->images->data, gDecompressionBuffer);
-    myImage.data = gDecompressionBuffer;
+
+    void *buffer = malloc_and_decompress(template->images->data, NULL);
+    myImage.data = buffer;
     myImage.size = size + offset;
     myTemplate.images = &myImage;
     myTemplate.tileTag = template->tileTag;
 
-    return LoadSpriteSheetByTemplate(&myTemplate, 0, offset);
+    u32 ret = LoadSpriteSheetByTemplate(&myTemplate, 0, offset);
+    Free(buffer);
+    return ret;
 }
 
-void LoadCompressedSpriteSheetOverrideBuffer(const struct CompressedSpriteSheet *src, void *buffer)
+u32 LoadCompressedSpritePalette(const struct CompressedSpritePalette *src)
 {
-    struct SpriteSheet dest;
+    return LoadCompressedSpritePaletteWithTag(src->data, src->tag);
+}
 
-    LZDecompressWram(src->data, buffer);
+u32 LoadCompressedSpritePaletteWithTag(const u32 *pal, u16 tag)
+{
+    u32 index;
+    struct SpritePalette dest;
+    void *buffer = malloc_and_decompress(pal, NULL);
+
     dest.data = buffer;
-    dest.size = src->size;
-    dest.tag = src->tag;
-    LoadSpriteSheet(&dest);
-}
-
-void LoadCompressedSpritePalette(const struct CompressedSpritePalette *src)
-{
-    struct SpritePalette dest;
-
-    LZDecompressWram(src->data, gDecompressionBuffer);
-    dest.data = (void *) gDecompressionBuffer;
-    dest.tag = src->tag;
-    LoadSpritePalette(&dest);
-}
-
-void LoadCompressedSpritePaletteWithTag(const u32 *pal, u16 tag)
-{
-    struct SpritePalette dest;
-
-    LZDecompressWram(pal, gDecompressionBuffer);
-    dest.data = (void *) gDecompressionBuffer;
     dest.tag = tag;
-    LoadSpritePalette(&dest);
+    index = LoadSpritePalette(&dest);
+    Free(buffer);
+    return index;
 }
 
 void LoadCompressedSpritePaletteOverrideBuffer(const struct CompressedSpritePalette *src, void *buffer)
 {
     struct SpritePalette dest;
 
-    LZDecompressWram(src->data, buffer);
+    DecompressDataWram(src->data, buffer);
     dest.data = buffer;
     dest.tag = src->tag;
     LoadSpritePalette(&dest);
@@ -251,27 +274,6 @@ void DecompressPicFromTable(const struct CompressedSpriteSheet *src, void *buffe
 void HandleLoadSpecialPokePic(bool32 isFrontPic, void *dest, s32 species, u32 personality)
 {
     LoadSpecialPokePic(dest, species, personality, isFrontPic);
-}
-
-static inline void UnpackFrequenciesLoop(const u32 *packedFreqs, u32 *freqs, u32 i)
-{
-    // Loop unpack
-    freqs[i*5 + 0] = (packedFreqs[i] >> (6*0)) & PACKED_FREQ_MASK;
-    freqs[i*5 + 1] = (packedFreqs[i] >> (6*1)) & PACKED_FREQ_MASK;
-    freqs[i*5 + 2] = (packedFreqs[i] >> (6*2)) & PACKED_FREQ_MASK;
-    freqs[i*5 + 3] = (packedFreqs[i] >> (6*3)) & PACKED_FREQ_MASK;
-    freqs[i*5 + 4] = (packedFreqs[i] >> (6*4)) & PACKED_FREQ_MASK;
-
-    freqs[15] += (packedFreqs[i] & PARTIAL_FREQ_MASK) >> (30 - 2*i);
-}
-
-void UnpackFrequencies(const u32 *packedFreqs, u32 *freqs)
-{
-    freqs[15] = 0;
-
-    UnpackFrequenciesLoop(packedFreqs, freqs, 0);
-    UnpackFrequenciesLoop(packedFreqs, freqs, 1);
-    UnpackFrequenciesLoop(packedFreqs, freqs, 2);
 }
 
 void DecompressDataVram(const u32 *src, void *dest)
@@ -312,92 +314,99 @@ void DecompressSubFrame(const u32 *src, void *dest, u32 frameId)
 }
 */
 
-void BuildDecompressionTable(const u32 *packedFreqs, struct DecodeYK *table, u32 *symbolTable)
-{
-    u32 freqs[16];
-    u32 currCol = 0;
-    UnpackFrequencies(packedFreqs, freqs);
-    for (u32 i = 0; i < 16; i++)
-    {
-        if (freqs[i] != 0)
-        {
-            CpuCopy32(&sYkTemplate[freqs[i]], &table[currCol], freqs[i]*sizeof(struct DecodeYK));
-            for (u32 j = 0; j < freqs[i]; j++)
-                symbolTable[currCol + j] = i;
-            currCol += freqs[i];
-        }
-    }
-}
-
-static EWRAM_DATA u8 sBitIndex = 0;
-static EWRAM_DATA u8 sPrevSymNibble = 0;
-static EWRAM_DATA u32 sReadIndex = 0;
-static EWRAM_DATA u32 sCurrState = 0;
-static EWRAM_DATA u32 sCurrBits = 0;
-static EWRAM_DATA u32 *sBitStream;
-static EWRAM_DATA u16 *sSymPointer;
-static EWRAM_DATA u8 *sLoPointer;
-static EWRAM_DATA void *sMemoryAllocated;
-
-struct DecodeStuff
-{
-    void *resultVec; // u16 for SymDelta, u8 for LOtANS
-    u32 *symbolTable;
-    struct DecodeYK *ykTable;
-    u32 count;
-};
-
 static inline void CopyFuncToIwram(void *funcBuffer, void *_funcStartAddress, void *_funcEndAdress)
 {
     CpuFastCopy(_funcStartAddress, funcBuffer, _funcEndAdress - _funcStartAddress);
 }
 
-// - O3 saves cycles
-__attribute__((target("arm"))) __attribute__((noinline)) __attribute__((optimize("-O3"))) void DecodeLOtANSLoop(const u32 *data, struct DecodeStuff *stuff, u8 *maskTable)
+#define REP0(X)
+#define REP1(X) X
+#define REP2(X) REP1(X) X
+#define REP3(X) REP2(X) X
+#define REP4(X) REP3(X) X
+#define REP5(X) REP4(X) X
+#define REP6(X) REP5(X) X
+#define REP7(X) REP6(X) X
+#define REP8(X) REP7(X) X
+#define REP9(X) REP8(X) X
+#define REP10(X) REP9(X) X
+
+#define REP(TENS,ONES,X) \
+  REP##TENS(REP10(X)) \
+  REP##ONES(X)
+
+//  Unpack packed tANS encoded data symbol frequences into their individual parts
+static inline void UnpackFrequenciesLoop(const u32 *packedFreqs, u16 *freqs, u32 i)
 {
-    u32 readIndex = sReadIndex;
-    u32 currBits = data[readIndex];
-    u32 bitIndex = sBitIndex;
-    for (u32 currSym = 0; currSym < stuff->count; currSym++)
-    {
-        u32 symbol = 0;
-        for (u32 currNibble = 0; currNibble < 2; currNibble++)
-        {
-            symbol += stuff->symbolTable[sCurrState] << (currNibble*4);
-            u32 currK = stuff->ykTable[sCurrState].kVal;
-            u32 nextState = stuff->ykTable[sCurrState].yVal;
-            nextState += (currBits >> bitIndex) & maskTable[currK];
-            if (bitIndex + currK < 32)
-            {
-                bitIndex += currK;
-            }
-            else if (bitIndex + currK == 32)
-            {
-                readIndex += 1;
-                currBits = data[readIndex];
-                bitIndex = 0;
-            }
-            else if ((bitIndex + currK) > 32)
-            {
-                readIndex += 1;
-                currBits = data[readIndex];
-                u32 remainder = bitIndex + currK - 32;
-                nextState += (data[readIndex] & ((1u << remainder) - 1)) << (currK - remainder);
-                bitIndex = remainder;
-            }
-            sCurrState = nextState-64;
-        }
-        ((u8*)(stuff->resultVec))[currSym] = symbol;
+    // Loop unpack
+    freqs[i*5 + 0] = (packedFreqs[i] >> (6*0)) & PACKED_FREQ_MASK;
+    freqs[i*5 + 1] = (packedFreqs[i] >> (6*1)) & PACKED_FREQ_MASK;
+    freqs[i*5 + 2] = (packedFreqs[i] >> (6*2)) & PACKED_FREQ_MASK;
+    freqs[i*5 + 3] = (packedFreqs[i] >> (6*3)) & PACKED_FREQ_MASK;
+    freqs[i*5 + 4] = (packedFreqs[i] >> (6*4)) & PACKED_FREQ_MASK;
+
+    freqs[15] += (packedFreqs[i] & PARTIAL_FREQ_MASK) >> (30 - 2*i);
+}
+
+static inline void UnpackFrequencies(const u32 *packedFreqs, u16 *freqs)
+{
+    freqs[15] = 0;
+
+    UnpackFrequenciesLoop(packedFreqs, freqs, 0);
+    UnpackFrequenciesLoop(packedFreqs, freqs, 1);
+    UnpackFrequenciesLoop(packedFreqs, freqs, 2);
+}
+
+// This is a small function, so we can store it in IWRAM for improved performance and don't need to worry about it taking too much precious IWRAM space.
+ARM_FUNC __attribute__((section(".iwram.code"))) __attribute__((noinline)) static void CopyTable(u32 *dst, const u32 *src, u32 size, u32 orrVal)
+{
+    for (u32 i = 0; i < size; i++) {
+        *dst++ = (*src++) | orrVal;
     }
-
-    sBitIndex = bitIndex;
-    sReadIndex = readIndex;
 }
 
-__attribute__((target("arm"))) __attribute__((noinline)) void SwitchToArmCallLOtANS(const u32 *data, struct DecodeStuff *stuff, u8 *maskTable, void (*decodeFunction)(const u32 *data, struct DecodeStuff *stuff, u8 *maskTable))
+//  Build the tANS decompression table from the specified frequencies and the precomputed helper struct
+__attribute__((optimize("-O3"))) static void BuildDecompressionTable(const u32 *packedFreqs, u32 *table)
 {
-    decodeFunction(data, stuff, maskTable);
+    u16 freqs[16];
+
+    UnpackFrequencies(packedFreqs, freqs);
+
+    for (u8 i = 0; i < 16; i++)
+    {
+        const u32 *srcTemplate;
+        switch (freqs[i]) {
+        case 0:
+            break;
+        default: {
+            srcTemplate = &sYkTemplate[freqs[i]];
+            CopyTable(table, srcTemplate, freqs[i], i << 3 );
+            table += freqs[i];
+            srcTemplate += freqs[i];
+            break;
+        }
+        case 1:
+            srcTemplate = &sYkTemplate[1];
+            REP(0, 1, *table++ = (*srcTemplate++) | (i << 3);)
+            break;
+        case 2:
+            srcTemplate = &sYkTemplate[2];
+            REP(0, 2, *table++ = (*srcTemplate++) | (i << 3);)
+            break;
+        case 3:
+            srcTemplate = &sYkTemplate[3];
+            REP(0, 3, *table++ = (*srcTemplate++) | (i << 3);)
+            break;
+        }
+    }
 }
+
+
+static EWRAM_DATA u8 sBitIndex = 0;
+static EWRAM_DATA u8 sPrevSymNibble = 0;
+static EWRAM_DATA u32 sCurrState = 0;
+static EWRAM_DATA u32 sCurrBits = 0;
+static EWRAM_DATA const u32 *sBitStream;
 
 // fastest in IWRAM, all masks are assigned separately, because we don't want to waste time on memset
 static inline void SetMaskTable(u8 *maskTable)
@@ -412,135 +421,7 @@ static inline void SetMaskTable(u8 *maskTable)
     maskTable[7] = 0; // This mask doesn't really 'exist', but because the memory is aligned to 4 now, the compiler can generate 2 ldr/str instructions instead of strb/strh
 }
 
-void DecodeLOtANS(const u32 *data, const u32 *pFreqs, u8 *resultVec, u32 count)
-{
-    struct DecodeYK *ykTable = sMemoryAllocated;
-    u32 *symbolTable = sMemoryAllocated + (TANS_TABLE_SIZE*sizeof(struct DecodeYK));
-    BuildDecompressionTable(pFreqs, ykTable, symbolTable);
 
-    u8 maskTable[8];
-    SetMaskTable(maskTable);
-
-    struct DecodeStuff stuff;
-    stuff.resultVec = resultVec;
-    stuff.ykTable = ykTable;
-    stuff.symbolTable = symbolTable;
-    stuff.count = count;
-
-    u32 funcBuffer[200];
-
-    CopyFuncToIwram(funcBuffer, DecodeLOtANSLoop, SwitchToArmCallLOtANS);
-    SwitchToArmCallLOtANS(data, &stuff, maskTable, (void *) funcBuffer);
-}
-
-void DecodeSymtANS(const u32 *data, const u32 *pFreqs, u16 *resultVec, u32 count)
-{
-    struct DecodeYK *ykTable = sMemoryAllocated;
-    u32 *symbolTable = sMemoryAllocated + (TANS_TABLE_SIZE*sizeof(struct DecodeYK));
-    BuildDecompressionTable(pFreqs, ykTable, symbolTable);
-    u32 currBits = data[sReadIndex];
-    for (u32 currSym = 0; currSym < count; currSym++)
-    {
-        u32 symbol = 0;
-        for (u32 currNibble = 0; currNibble < 4; currNibble++)
-        {
-            symbol += symbolTable[sCurrState] << (currNibble*4);
-            u32 currK = ykTable[sCurrState].kVal;
-            u32 nextState = ykTable[sCurrState].yVal;
-            nextState += (currBits >> sBitIndex) & (0xff >> (8-currK));
-            if (sBitIndex + currK < 32)
-            {
-                sBitIndex += currK;
-            }
-            else if (sBitIndex + currK == 32)
-            {
-                sReadIndex += 1;
-                currBits = data[sReadIndex];
-                sBitIndex = 0;
-            }
-            else if ((sBitIndex + currK) > 32)
-            {
-                sReadIndex += 1;
-                currBits = data[sReadIndex];
-                u32 remainder = sBitIndex + currK - 32;
-                nextState += (currBits & ((1u << remainder) - 1)) << (currK - remainder);
-                sBitIndex = remainder;
-            }
-            sCurrState = nextState - 64;
-        }
-        resultVec[currSym] = symbol;
-    }
-}
-
-// -O3 saves us almost 30k cycles compared to -O2
-__attribute__((target("arm"))) __attribute__((noinline)) __attribute__((optimize("-O3"))) void DecodeSymDeltatANSLoop(const u32 *data, struct DecodeStuff *stuff, u8 *maskTable)
-{
-    u32 readIndex = sReadIndex;
-    u32 currBits = data[readIndex];
-    u32 prevSymbol = 0;
-    u32 bitIndex = sBitIndex;
-    for (u32 currSym = 0; currSym < stuff->count; currSym++)
-    {
-        u32 symbol = 0;
-        for (u32 currNibble = 0; currNibble < 4; currNibble++)
-        {
-            u32 currSymbol = (prevSymbol + stuff->symbolTable[sCurrState]) & 0xf;
-            prevSymbol = currSymbol;
-            symbol += currSymbol << (currNibble*4);
-            u32 currK = stuff->ykTable[sCurrState].kVal;
-            u32 nextState = stuff->ykTable[sCurrState].yVal;
-            nextState += (currBits >> bitIndex) & maskTable[currK];
-            if (bitIndex + currK < 32)
-            {
-                bitIndex += currK;
-            }
-            else if (bitIndex + currK == 32)
-            {
-                readIndex += 1;
-                currBits = data[readIndex];
-                bitIndex = 0;
-            }
-            else if ((bitIndex + currK) > 32)
-            {
-                readIndex += 1;
-                currBits = data[readIndex];
-                u32 remainder = bitIndex + currK - 32;
-                nextState += (currBits & ((1u << remainder) - 1)) << (currK - remainder);
-                bitIndex = remainder;
-            }
-            sCurrState = nextState - 64;
-        }
-        ((u16*)(stuff->resultVec))[currSym] = symbol;
-    }
-    sBitIndex = bitIndex;
-    sReadIndex = readIndex;
-}
-
-__attribute__((target("arm"))) __attribute__((noinline)) void SwitchToArmCallSymDeltaANS(const u32 *data, struct DecodeStuff *stuff, u8 *maskTable, void (*decodeFunction)(const u32 *data, struct DecodeStuff *stuff, u8 *maskTable))
-{
-    decodeFunction(data, stuff, maskTable);
-}
-
-void DecodeSymDeltatANS(const u32 *data, const u32 *pFreqs, u16 *resultVec, u32 count)
-{
-    struct DecodeYK *ykTable = sMemoryAllocated;
-    u32 *symbolTable = sMemoryAllocated + (TANS_TABLE_SIZE*sizeof(struct DecodeYK));
-    BuildDecompressionTable(pFreqs, ykTable, symbolTable);
-
-    u8 maskTable[8];
-    SetMaskTable(maskTable);
-
-    struct DecodeStuff stuff;
-    stuff.resultVec = resultVec;
-    stuff.ykTable = ykTable;
-    stuff.symbolTable = symbolTable;
-    stuff.count = count;
-
-    u32 funcBuffer[200];
-
-    CopyFuncToIwram(funcBuffer, DecodeSymDeltatANSLoop, SwitchToArmCallSymDeltaANS);
-    SwitchToArmCallSymDeltaANS(data, &stuff, maskTable, (void *) funcBuffer);
-}
 
 static inline void Copy16(void *_src, void *_dst, u32 size)
 {
@@ -559,471 +440,185 @@ static inline void Fill16(u16 value, void *_dst, u32 size)
     }
 }
 
-__attribute__((target("arm"))) __attribute__((noinline)) void DecodeInstructions(u32 numInstructions, u8 *loVec, u16 *symVec, void *dest)
+#define LOT_LOOP_MAIN(nibble)   \
+{ \
+    u32 ykVals = ykTableLo[sCurrState];   \
+    symbolLo |= TABLE_READ_SYMBOL(ykVals) << (nibble*4);   \
+    currK = TABLE_READ_K(ykVals);   \
+    sCurrState = TABLE_READ_Y(ykVals);  \
+    sCurrState += (currBits >> bitIndex) & TABLE_READ_MASK(ykVals); \
+    bitIndex += currK;  \
+}
+
+// The same for all the loops
+#define LOOP_BITADVANCE() \
+{   \
+    currBits = *data++; \
+    bitIndex -= 32; \
+    if (bitIndex != 0)  \
+    {   \
+        sCurrState += (currBits & ((1u << bitIndex) - 1)) << (currK - bitIndex); \
+    } \
+}
+
+#define DecodeSingleLO(which) \
+{ \
+    symbolLo = 0; \
+    LOT_LOOP_MAIN(0); \
+    if (bitIndex >= 32) \
+    { \
+        LOOP_BITADVANCE(); \
+ \
+        LOT_LOOP_MAIN(1); \
+        goto END##which; \
+    } \
+    LOT_LOOP_MAIN(1); \
+    if (bitIndex >= 32) \
+    { \
+        LOOP_BITADVANCE(); \
+    } \
+    END##which: \
+} \
+
+#define ANS_LOOP_MAIN(nibble)   \
+{ \
+    u32 ykVals = ykTable[sCurrState]; \
+    currK = TABLE_READ_K(ykVals); \
+    currSymbol = (currSymbol + TABLE_READ_SYMBOL(ykVals)) & 0xf; \
+    symbol |= currSymbol << (nibble*4); \
+    sCurrState = TABLE_READ_Y(ykVals); \
+    sCurrState += ((currBits >> bitIndex) & TABLE_READ_MASK(ykVals)); \
+    bitIndex += currK; \
+}
+
+static inline __attribute__((always_inline)) u32 DecodeSingleSymDelta(u32 *ykTable)
 {
-    u32 loIndex = 0;
-    u32 symIndex = 0;
-    u32 insCount = 0;
-    while (insCount < numInstructions)
+    u32 symbol = 0;
+    u32 currK;
+    u32 bitIndex = sBitIndex;
+    u32 currSymbol = sPrevSymNibble;
+    u32 currBits = sCurrBits;
+    const u32 *data = sBitStream;
+
+    ANS_LOOP_MAIN(0);
+    if (bitIndex >= 32)
     {
-        u32 currLength = loVec[loIndex] & FIRST_LO_MASK;
-        if (loVec[loIndex] & CONTINUE_BIT)
+        LOOP_BITADVANCE();
+
+        ANS_LOOP_MAIN(1);
+        ANS_LOOP_MAIN(2);
+        ANS_LOOP_MAIN(3);
+        goto END;
+    }
+
+    ANS_LOOP_MAIN(1);
+    if (bitIndex >= 32)
+    {
+        LOOP_BITADVANCE();
+
+        ANS_LOOP_MAIN(2);
+        ANS_LOOP_MAIN(3);
+        goto END;
+    }
+
+    ANS_LOOP_MAIN(2);
+    if (bitIndex >= 32)
+    {
+        LOOP_BITADVANCE();
+
+        ANS_LOOP_MAIN(3);
+        goto END;
+    }
+
+    ANS_LOOP_MAIN(3);
+    if (bitIndex >= 32)
+    {
+        LOOP_BITADVANCE();
+    }
+
+END:
+    sBitStream = data;
+    sPrevSymNibble = currSymbol;
+    sBitIndex = bitIndex;
+    sCurrBits = currBits;
+    return symbol;
+}
+
+ARM_FUNC __attribute__((noinline, no_reorder)) __attribute__((optimize("-O3"))) static void Mode5Loop(u32 numInstructions, u32 *ykTableLo, u32 *ykTableSym, u16 *shortDest)
+{
+    for (u32 currInstruction = 0; currInstruction < numInstructions; currInstruction++)
+    {
+        u32 symbolLo;
+        u32 bitIndex = sBitIndex;
+        u32 currK;
+        u32 currBits = sCurrBits;
+        u32 currLength, currOffset;
+        const u32 *data = sBitStream;
+
+        DecodeSingleLO(1);
+        currLength = symbolLo;
+        if (currLength & CONTINUE_BIT)
         {
-            currLength += loVec[loIndex+1] << 7;
-            loIndex += 2;
+            currLength ^= CONTINUE_BIT;
+            DecodeSingleLO(2);
+            currLength += symbolLo << 7;
+        }
+
+        DecodeSingleLO(3);
+        currOffset = symbolLo;
+        if (currOffset & CONTINUE_BIT)
+        {
+            currOffset ^= CONTINUE_BIT;
+            DecodeSingleLO(4)
+            currOffset += symbolLo << 7;
+        }
+
+        sBitIndex = bitIndex;
+        sCurrBits = currBits;
+        sBitStream = data;
+
+        u32 currDeltaSym = DecodeSingleSymDelta(ykTableSym);
+        if (currLength == 0)
+        {
+            *shortDest++ = currDeltaSym;
+            for (size_t i = 0; i < currOffset - 1; i++)
+            {
+                *shortDest++ = DecodeSingleSymDelta(ykTableSym);
+            }
         }
         else
         {
-            loIndex++;
-        }
-        u32 currOffset = loVec[loIndex] & FIRST_LO_MASK;
-        if (loVec[loIndex] & CONTINUE_BIT)
-        {
-            currOffset += loVec[loIndex+1] << 7;
-            loIndex += 2;
-        }
-        else
-        {
-            loIndex++;
-        }
-        if (currLength != 0)
-        {
-            *(u16 *)(dest) = symVec[symIndex];
-            dest = (void *)(dest + 2);
             if (currOffset == 1)
             {
-                Fill16(symVec[symIndex], dest, currLength);
-                dest = (void *)(dest + currLength*2);
+                Fill16(currDeltaSym, shortDest, currLength + 1);
+                shortDest += currLength + 1;
             }
             else
             {
-                Copy16((void *)(dest - currOffset*2), dest, currLength);
-                //DmaCopy16(3, (void *)(dest - currOffset*2), dest, currLength*2);
-                dest = (void *)(dest + currLength*2);
-            }
-            symIndex++;
-        }
-        else
-        {
-            Copy16(&symVec[symIndex], dest, currOffset);
-            dest = (void *)(dest + currOffset*2);
-            symIndex += currOffset;
-        }
-    }
-}
-
-__attribute__((target("arm"))) __attribute__((noinline)) void SwitchToArmCallDecodeInstructions(u32 headerLoSize, u8 *loVec, u16 *symVec, void *dest, void (*decodeFunction)(u32 headerLoSize, u8 *loVec, u16 *symVec, void *dest))
-{
-    decodeFunction(headerLoSize, loVec, symVec, dest);
-}
-
-void DecodeInstructionsIwram(u32 headerLoSize, u8 *loVec, u16 *symVec, void *dest)
-{
-    u32 funcBuffer[200];
-
-    CopyFuncToIwram(funcBuffer, DecodeInstructions, SwitchToArmCallDecodeInstructions);
-    SwitchToArmCallDecodeInstructions(headerLoSize, loVec, symVec, dest, (void *) funcBuffer);
-}
-
-static u16 DecodeSingleSym(struct DecodeYK *ykTable, u32 *symbolTable)
-{
-    u16 currSymbol = 0;
-    for (u32 i = 0; i < 4; i++)
-    {
-        currSymbol += symbolTable[sCurrState] << (4*i);
-        u32 nextState = ykTable[sCurrState].yVal;
-        u32 currK = ykTable[sCurrState].kVal;
-        nextState += (sCurrBits >> sBitIndex) & (0xff >> (8-currK));
-        if (sBitIndex + currK < 32)
-        {
-            sBitIndex += currK;
-        }
-        else if (sBitIndex + currK == 32)
-        {
-            sCurrBits = sBitStream[sReadIndex++];
-            sBitIndex = 0;
-        }
-        else if (sBitIndex + currK > 32)    //  If statement can probably be removed
-        {
-            sCurrBits = sBitStream[sReadIndex++];
-            u32 remainder = sBitIndex + currK - 32;
-            nextState += (sCurrBits & ((1u << remainder) - 1)) << (currK - remainder);
-            sBitIndex = remainder;
-        }
-
-        sCurrState = nextState - TANS_TABLE_SIZE;
-    }
-    return currSymbol;
-}
-
-static u16 DecodeSingleSymDelta(struct DecodeYK *ykTable, u32 *symbolTable)
-{
-    u16 currSymbol = 0;
-    for (u32 i = 0; i < 4; i++)
-    {
-        u8 tempSym = (symbolTable[sCurrState] + sPrevSymNibble) & 0xf;
-        sPrevSymNibble = tempSym;
-        currSymbol += tempSym << (4*i);
-        u32 nextState = ykTable[sCurrState].yVal;
-        u32 currK = ykTable[sCurrState].kVal;
-        nextState += (sCurrBits >> sBitIndex) & (0xff >> (8-currK));
-        if (sBitIndex + currK < 32)
-        {
-            sBitIndex += currK;
-        }
-        else if (sBitIndex + currK == 32)
-        {
-            sCurrBits = sBitStream[sReadIndex++];
-            sBitIndex = 0;
-        }
-        else if (sBitIndex + currK > 32)    //  If statement can probably be removed
-        {
-            sCurrBits = sBitStream[sReadIndex++];
-            u32 remainder = sBitIndex + currK - 32;
-            nextState += (sCurrBits & ((1u << remainder) - 1)) << (currK - remainder);
-            sBitIndex = remainder;
-        }
-
-        sCurrState = nextState - TANS_TABLE_SIZE;
-    }
-    return currSymbol;
-}
-
-static u8 DecodeSingleLO(struct DecodeYK *ykTable, u32 *symbolTable)
-{
-    u16 currSymbol = 0;
-    for (u32 i = 0; i < 2; i++)
-    {
-        currSymbol += symbolTable[sCurrState] << (4*i);
-        u32 nextState = ykTable[sCurrState].yVal;
-        u32 currK = ykTable[sCurrState].kVal;
-        nextState += (sCurrBits >> sBitIndex) & (0xff >> (8-currK));
-        if (sBitIndex + currK < 32)
-        {
-            sBitIndex += currK;
-        }
-        else if (sBitIndex + currK == 32)
-        {
-            sCurrBits = sBitStream[sReadIndex++];
-            sBitIndex = 0;
-        }
-        else if (sBitIndex + currK > 32)    //  If statement can probably be removed
-        {
-            sCurrBits = sBitStream[sReadIndex++];
-            u32 remainder = sBitIndex + currK - 32;
-            nextState += (sCurrBits & ((1u << remainder) - 1)) << (currK - remainder);
-            sBitIndex = remainder;
-        }
-
-        sCurrState = nextState - TANS_TABLE_SIZE;
-    }
-    return currSymbol;
-}
-
-static void DecodeMode0(u32 numInstructions, u8 *pLoVec, u16 *pSymVec, void *dest)
-{
-    u16 *shortDest = (u16 *)dest;
-    u32 currLength;
-    u32 currOffset;
-    u32 destIndex = 0;
-    for (u32 currInstruction = 0; currInstruction < numInstructions; currInstruction++)
-    {
-        currLength = *pLoVec;
-        pLoVec++;
-        if (currLength & CONTINUE_BIT)
-        {
-            currLength ^= CONTINUE_BIT;
-            currLength += *pLoVec << 7;
-            pLoVec++;
-        }
-        currOffset = *pLoVec;
-        pLoVec++;
-        if (currOffset & CONTINUE_BIT)
-        {
-            currOffset ^= CONTINUE_BIT;
-            currOffset += *pLoVec << 7;
-            pLoVec++;
-        }
-        if (currLength == 0)
-        {
-            Copy16(pSymVec, &shortDest[destIndex], currOffset);
-            destIndex += currOffset;
-            pSymVec += currOffset;
-        }
-        else if (currOffset == 1)
-        {
-            Fill16(*pSymVec, &shortDest[destIndex], currLength + 1);
-            destIndex += currLength + 1;
-            pSymVec++;
-        }
-        else
-        {
-            shortDest[destIndex] = *pSymVec;
-            pSymVec++;
-            destIndex++;
-            Copy16(&shortDest[destIndex - currOffset], &shortDest[destIndex], currLength);
-            destIndex += currLength;
-        }
-    }
-}
-
-static void DecodeMode1(u32 numInstructions, u8 *pLoVec, const u32 *packedFreqs, void *dest)
-{
-    struct DecodeYK *ykTable = Alloc(TANS_TABLE_SIZE*sizeof(struct DecodeYK));
-    u32 *symbolTable = Alloc(TANS_TABLE_SIZE*sizeof(u32));
-    BuildDecompressionTable(packedFreqs, ykTable, symbolTable);
-    sCurrBits = sBitStream[sReadIndex];
-    sReadIndex++;
-    u16 *shortDest = (u16 *)dest;
-    u32 currLength;
-    u32 currOffset;
-    u32 destIndex = 0;
-    for (u32 currInstruction = 0; currInstruction < numInstructions; currInstruction++)
-    {
-        currLength = *pLoVec;
-        pLoVec++;
-        if (currLength & CONTINUE_BIT)
-        {
-            currLength ^= CONTINUE_BIT;
-            currLength += *pLoVec << 7;
-            pLoVec++;
-        }
-        currOffset = *pLoVec;
-        pLoVec++;
-        if (currOffset & CONTINUE_BIT)
-        {
-            currOffset ^= CONTINUE_BIT;
-            currOffset += *pLoVec << 7;
-            pLoVec++;
-        }
-        if (currLength == 0)
-        {
-            for (size_t i = 0; i < currOffset; i++)
-                shortDest[destIndex++] = DecodeSingleSym(ykTable, symbolTable);
-        }
-        else if (currOffset == 1)
-        {
-            u16 currSymbol = DecodeSingleSym(ykTable, symbolTable);
-            Fill16(currSymbol, &shortDest[destIndex], currLength + 1);
-            destIndex += currLength + 1;
-        }
-        else
-        {
-            shortDest[destIndex++] = DecodeSingleSym(ykTable, symbolTable);
-            Copy16(&shortDest[destIndex - currOffset], &shortDest[destIndex], currLength);
-            destIndex += currLength;
-        }
-    }
-    Free(ykTable);
-    Free(symbolTable);
-}
-
-static void DecodeMode2(u32 numInstructions, u8 *pLoVec, const u32 *packedFreqs, void *dest)
-{
-    struct DecodeYK *ykTable = Alloc(TANS_TABLE_SIZE*sizeof(struct DecodeYK));
-    u32 *symbolTable = Alloc(TANS_TABLE_SIZE*sizeof(u32));
-    BuildDecompressionTable(packedFreqs, ykTable, symbolTable);
-    sCurrBits = sBitStream[sReadIndex];
-    sReadIndex++;
-    u16 *shortDest = (u16 *)dest;
-    u32 currLength;
-    u32 currOffset;
-    u32 destIndex = 0;
-    for (u32 currInstruction = 0; currInstruction < numInstructions; currInstruction++)
-    {
-        currLength = *pLoVec;
-        pLoVec++;
-        if (currLength & CONTINUE_BIT)
-        {
-            currLength ^= CONTINUE_BIT;
-            currLength += *pLoVec << 7;
-            pLoVec++;
-        }
-        currOffset = *pLoVec;
-        pLoVec++;
-        if (currOffset & CONTINUE_BIT)
-        {
-            currOffset ^= CONTINUE_BIT;
-            currOffset += *pLoVec << 7;
-            pLoVec++;
-        }
-        if (currLength == 0)
-        {
-            for (size_t i = 0; i < currOffset; i++)
-                shortDest[destIndex++] = DecodeSingleSymDelta(ykTable, symbolTable);
-        }
-        else if (currOffset == 1)
-        {
-            u16 currSymbol = DecodeSingleSymDelta(ykTable, symbolTable);
-            Fill16(currSymbol, &shortDest[destIndex], currLength + 1);
-            destIndex += currLength + 1;
-        }
-        else
-        {
-            shortDest[destIndex++] = DecodeSingleSymDelta(ykTable, symbolTable);
-            Copy16(&shortDest[destIndex - currOffset], &shortDest[destIndex], currLength);
-            destIndex += currLength;
-        }
-    }
-    Free(ykTable);
-    Free(symbolTable);
-}
-
-static void DecodeMode3(u32 numInstructions, u16 *pSymVec, const u32 *packedFreqs, void *dest)
-{
-    struct DecodeYK *ykTable = Alloc(TANS_TABLE_SIZE*sizeof(struct DecodeYK));
-    u32 *symbolTable = Alloc(TANS_TABLE_SIZE*sizeof(u32));
-    BuildDecompressionTable(packedFreqs, ykTable, symbolTable);
-    sCurrBits = sBitStream[sReadIndex];
-    sReadIndex++;
-    u16 *shortDest = (u16 *)dest;
-    u32 currLength;
-    u32 currOffset;
-    u32 destIndex = 0;
-    for (u32 currInstruction = 0; currInstruction < numInstructions; currInstruction++)
-    {
-        currLength = DecodeSingleLO(ykTable, symbolTable);
-        if (currLength & CONTINUE_BIT)
-        {
-            currLength ^= CONTINUE_BIT;
-            currLength += (u32)DecodeSingleLO(ykTable, symbolTable) << 7;
-        }
-        currOffset = DecodeSingleLO(ykTable, symbolTable);
-        if (currOffset & CONTINUE_BIT)
-        {
-            currOffset ^= CONTINUE_BIT;
-            currOffset += (u32)DecodeSingleLO(ykTable, symbolTable) << 7;
-        }
-        if (currLength == 0)
-        {
-            for (size_t i = 0; i < currOffset; i++)
-            {
-                shortDest[destIndex++] = *pSymVec;
-                pSymVec++;
+                *shortDest++ = currDeltaSym;
+                Copy16(shortDest - currOffset, shortDest, currLength);
+                shortDest += currLength;
             }
         }
-        else if (currOffset == 1)
-        {
-            Fill16(*pSymVec, &shortDest[destIndex], currLength + 1);
-            pSymVec++;
-            destIndex += currLength + 1;
-        }
-        else
-        {
-            shortDest[destIndex++] = *pSymVec;
-            pSymVec++;
-            Copy16(&shortDest[destIndex - currOffset], &shortDest[destIndex], currLength);
-            destIndex += currLength;
-        }
     }
-    Free(ykTable);
-    Free(symbolTable);
 }
 
-static void DecodeMode4(u32 numInstructions, const u32 *packedLOFreqs, const u32 *packedSymFreqs, void *dest)
+ARM_FUNC __attribute__((no_reorder)) static void SwitchToArmCallMode5Loop(u32 numInstructions, u32 *ykTableLo, u32 *ykTableSym, u16 *shortDest, void (*func)(u32 numInstructions, u32 *ykTableLo, u32 *ykTableSym, u16 *shortDest))
 {
-    struct DecodeYK *loTable = Alloc(TANS_TABLE_SIZE*sizeof(struct DecodeYK));
-    u32 *loSymbols = Alloc(TANS_TABLE_SIZE*sizeof(u32));
-    struct DecodeYK *symTable = Alloc(TANS_TABLE_SIZE*sizeof(struct DecodeYK));
-    u32 *symSymbols = Alloc(TANS_TABLE_SIZE*sizeof(u32));
-    sCurrBits = sBitStream[sReadIndex];
-    sReadIndex++;
-    u16 *shortDest = (u16 *)dest;
-    u32 currLength;
-    u32 currOffset;
-    u32 destIndex = 0;
-    BuildDecompressionTable(packedLOFreqs, loTable, loSymbols);
-    BuildDecompressionTable(packedSymFreqs, symTable, symSymbols);
-    for (u32 currInstruction = 0; currInstruction < numInstructions; currInstruction++)
-    {
-        currLength = DecodeSingleLO(loTable, loSymbols);
-        if (currLength & CONTINUE_BIT)
-        {
-            currLength ^= CONTINUE_BIT;
-            currLength += (u32)DecodeSingleLO(loTable, loSymbols) << 7;
-        }
-        currOffset = DecodeSingleLO(loTable, loSymbols);
-        if (currOffset & CONTINUE_BIT)
-        {
-            currOffset ^= CONTINUE_BIT;
-            currOffset += (u32)DecodeSingleLO(loTable, loSymbols) << 7;
-        }
-        if (currLength == 0)
-        {
-            for (size_t i = 0; i < currOffset; i++)
-            {
-                shortDest[destIndex++] = DecodeSingleSym(symTable, symSymbols);
-            }
-        }
-        else if (currOffset == 1)
-        {
-            Fill16(DecodeSingleSym(symTable, symSymbols), &shortDest[destIndex], currLength + 1);
-            destIndex += currLength + 1;
-        }
-        else
-        {
-            shortDest[destIndex++] = DecodeSingleSym(symTable, symSymbols);
-            Copy16(&shortDest[destIndex - currOffset], &shortDest[destIndex], currLength);
-            destIndex += currLength;
-        }
-    }
-    Free(loTable);
-    Free(symTable);
-    Free(loSymbols);
-    Free(symSymbols);
+    func(numInstructions, ykTableLo, ykTableSym, shortDest);
 }
 
-static void DecodeMode5(u32 numInstructions, const u32 *packedLOFreqs, const u32 *packedSymFreqs, void *dest)
+__attribute__((noinline)) static void DecodeMode5(u32 numInstructions, const u32 *packedLOFreqs, const u32 *packedSymFreqs, void *dest)
 {
-    struct DecodeYK *loTable = Alloc(TANS_TABLE_SIZE*sizeof(struct DecodeYK));
-    u32 *loSymbols = Alloc(TANS_TABLE_SIZE*sizeof(u32));
-    struct DecodeYK *symTable = Alloc(TANS_TABLE_SIZE*sizeof(struct DecodeYK));
-    u32 *symSymbols = Alloc(TANS_TABLE_SIZE*sizeof(u32));
-    sCurrBits = sBitStream[sReadIndex];
-    sReadIndex++;
-    u16 *shortDest = (u16 *)dest;
-    u32 currLength;
-    u32 currOffset;
-    u32 destIndex = 0;
-    BuildDecompressionTable(packedLOFreqs, loTable, loSymbols);
-    BuildDecompressionTable(packedSymFreqs, symTable, symSymbols);
-    for (u32 currInstruction = 0; currInstruction < numInstructions; currInstruction++)
-    {
-        currLength = DecodeSingleLO(loTable, loSymbols);
-        if (currLength & CONTINUE_BIT)
-        {
-            currLength ^= CONTINUE_BIT;
-            currLength += (u32)DecodeSingleLO(loTable, loSymbols) << 7;
-        }
-        currOffset = DecodeSingleLO(loTable, loSymbols);
-        if (currOffset & CONTINUE_BIT)
-        {
-            currOffset ^= CONTINUE_BIT;
-            currOffset += (u32)DecodeSingleLO(loTable, loSymbols) << 7;
-        }
-        if (currLength == 0)
-        {
-            for (size_t i = 0; i < currOffset; i++)
-            {
-                shortDest[destIndex++] = DecodeSingleSymDelta(symTable, symSymbols);
-            }
-        }
-        else if (currOffset == 1)
-        {
-            Fill16(DecodeSingleSymDelta(symTable, symSymbols), &shortDest[destIndex], currLength + 1);
-            destIndex += currLength + 1;
-        }
-        else
-        {
-            shortDest[destIndex++] = DecodeSingleSymDelta(symTable, symSymbols);
-            Copy16(&shortDest[destIndex - currOffset], &shortDest[destIndex], currLength);
-            destIndex += currLength;
-        }
-    }
-    Free(loTable);
-    Free(symTable);
-    Free(loSymbols);
-    Free(symSymbols);
+    u32 funcBuffer[800];
+
+    sCurrBits = *sBitStream++;
+    BuildDecompressionTable(packedLOFreqs, sWorkingYkTable_Lo);
+    BuildDecompressionTable(packedSymFreqs, sWorkingYkTable_Sym);
+
+    //Mode5Loop(numInstructions, sWorkingYkTable_Lo, sWorkingYkTable_Sym, dest);
+    CopyFuncToIwram(funcBuffer, Mode5Loop, SwitchToArmCallMode5Loop);
+    SwitchToArmCallMode5Loop(numInstructions, sWorkingYkTable_Lo, sWorkingYkTable_Sym, dest, (void *) funcBuffer);
 }
 
 void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *dest)
@@ -1036,7 +631,6 @@ void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *
     sCurrState = header->initialState;
     sBitIndex = 0;
     sPrevSymNibble = 0;
-    sReadIndex = 0;
     sCurrBits = 0;
     // Allocate also for ykTable and symbolTable
     //u32 headerLoSize = header->loSize;
@@ -1059,47 +653,12 @@ void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *
     const u32 *pLoFreqs;
     const u32 *pSymFreqs;
 
-    sReadIndex = 0;
     switch (header->mode)
     {
-        case BASE_ONLY:
-            sSymPointer = (u16 *)(&data[sReadIndex]);
-            sLoPointer = (u8 *)(&data[sReadIndex]) + 2*header->secondDataOffset;
-            DecodeMode0(header->numInstructions, sLoPointer, sSymPointer, dest);
-            break;
-        case ENCODE_SYMS:
-            pSymFreqs = &data[sReadIndex];
-            sReadIndex += 3;
-            sLoPointer = (u8 *)(&data[sReadIndex]) + 2*header->secondDataOffset;
-            sBitStream = (u32 *)data;
-            DecodeMode1(header->numInstructions, sLoPointer, pSymFreqs, dest);
-            break;
-        case ENCODE_DELTA_SYMS:
-            pSymFreqs = &data[sReadIndex];
-            sReadIndex += 3;
-            sLoPointer = (u8 *)(&data[sReadIndex]) + 2*header->secondDataOffset;
-            sBitStream = (u32 *)data;
-            DecodeMode2(header->numInstructions, sLoPointer, pSymFreqs, dest);
-            break;
-        case ENCODE_LO:
-            pLoFreqs = &data[sReadIndex];
-            sReadIndex += 3;
-            sSymPointer = (u16 *)(&data[sReadIndex]) + header->secondDataOffset;
-            sBitStream = (u32 *)data;
-            DecodeMode3(header->numInstructions, sSymPointer, pLoFreqs, dest);
-            break;
-        case ENCODE_BOTH:
-            pLoFreqs = &data[sReadIndex];
-            pSymFreqs = &data[sReadIndex + 3];
-            sReadIndex += 6;
-            sBitStream = (u32 *)data;
-            DecodeMode4(header->numInstructions, pLoFreqs, pSymFreqs, dest);
-            break;
         case ENCODE_BOTH_DELTA_SYMS:
-            pLoFreqs = &data[sReadIndex];
-            pSymFreqs = &data[sReadIndex + 3];
-            sReadIndex += 6;
-            sBitStream = (u32 *)data;
+            pLoFreqs = &data[0];
+            pSymFreqs = &data[3];
+            sBitStream = &data[6];
             DecodeMode5(header->numInstructions, pLoFreqs, pSymFreqs, dest);
             break;
     }
