@@ -27,7 +27,7 @@ static IWRAM_DATA u32 sWorkingYkTable_Sym[TANS_TABLE_SIZE] = {0};
 
 // Helper struct to build the tANS decode tables without having to do calculations at run-time
 // Mask Table is 0, 1, 3, 7, 15, 31, 63.
-static IWRAM_INIT u32 sYkTemplate[2*TANS_TABLE_SIZE] = {
+static const u32 sYkTemplate[2*TANS_TABLE_SIZE] = {
     [0] = 0,
     [1] = SET_TABLE_ENTRY(6, (1 << 6) - 64, 63),
     [2] = SET_TABLE_ENTRY(5, (2 << 5) - 64, 31),
@@ -406,9 +406,7 @@ ARM_FUNC __attribute__((no_reorder)) static void SwitchToArmCallBuildDecompressi
 }
 
 static IWRAM_DATA u32 sCurrState = 0;
-static IWRAM_DATA u32 sCurrBits = 0;
 static IWRAM_DATA const u32 *sBitStream;
-static IWRAM_DATA u32 sCurrSymbol = 0;
 
 static inline void Copy16(void *_src, void *_dst, u32 size)
 {
@@ -471,8 +469,8 @@ static inline void Fill16(u16 value, void *_dst, u32 size)
 { \
     u32 ykVals = ykTableSym[sCurrState]; \
     currK = TABLE_READ_K(ykVals); \
-    sCurrSymbol = (sCurrSymbol + TABLE_READ_SYMBOL(ykVals)) & 0xf; \
-    symbolSymDelta |= sCurrSymbol << (nibble*4); \
+    currSymbol = (currSymbol + TABLE_READ_SYMBOL(ykVals)) & 0xf; \
+    symbolSymDelta |= currSymbol << (nibble*4); \
     sCurrState = TABLE_READ_Y(ykVals); \
     sCurrState += ((currBits >> bitIndex) & TABLE_READ_MASK(ykVals)); \
     bitIndex += currK; \
@@ -525,7 +523,8 @@ ARM_FUNC __attribute__((noinline, no_reorder)) __attribute__((optimize("-Ofast")
 {
     const u32 *data = sBitStream;
     u32 bitIndex = 0;
-    u32 currBits = sCurrBits;
+    u32 currBits = *data++;
+    u32 currSymbol = 0;
 
     do
     {
@@ -592,9 +591,7 @@ ARM_FUNC __attribute__((no_reorder)) static void SwitchToArmCallMode5Loop(u16 *d
 
 __attribute__((noinline)) static void DecodeMode5(u16 *desiredDest, const u32 *packedLOFreqs, const u32 *packedSymFreqs, void *dest)
 {
-    u32 funcBuffer[832];
-
-    sCurrBits = *sBitStream++;
+    u32 funcBuffer[700];
 
     CopyFuncToIwram(funcBuffer, BuildDecompressionTable, SwitchToArmCallBuildDecompressionTable);
 
@@ -614,7 +611,6 @@ void SmolDecompressData(const struct SmolHeader *header, const u32 *data, void *
     //u8 *leftoverPos = (u8 *)data;
 
     sCurrState = header->initialState;
-    sCurrBits = 0;
     // Allocate also for ykTable and symbolTable
     //u32 headerLoSize = header->loSize;
     //u32 headerSymSize = header->symSize;
