@@ -7,631 +7,784 @@
 	.fpu softvfp
 	.syntax unified
 	.arm
-	.type	Mode5Loop, %function
-Mode5Loop:
+	.type	BuildDecompressionTable, %function
+BuildDecompressionTable:
 	@ Function supports interworking.
-	@ args = 0, pretend = 0, frame = 12
+	@ args = 0, pretend = 0, frame = 64
 	@ frame_needed = 0, uses_anonymous_args = 0
 	push	{r4, r5, r6, r7, r8, r9, r10, fp, lr}
-	cmp	r0, #0
-	sub	sp, sp, #12
+	sub	sp, sp, #64
+	ldr	ip, [r0, #4]
+	ldr	r2, [r0, #8]
+	mov	r3, #0
+	mov	r5, sp
+	ldr	lr, [r0]
+	lsr	r4, ip, #28
+	lsr	r0, r2, #26
+	and	r4, r4, #12
+	and	r0, r0, #48
+	orr	r0, r0, r4
+	add	r0, r0, lr, lsr #30
+	str	r0, [sp, #60]
+	lsr	r0, lr, #6
+	and	r0, r0, #63
+	str	r0, [sp, #4]
+	lsr	r0, lr, #12
+	and	r0, r0, #63
 	str	r0, [sp, #8]
-	beq	.L1
-	mov	r10, #0
-	mov	r4, r3
-	ldr	r3, .L125
-	mov	fp, r1
-	ldm	r3, {r8, lr}
-	ldrb	r0, [r3, #8]	@ zero_extendqisi2
-	ldrb	r1, [r3, #9]	@ zero_extendqisi2
-	ldr	ip, [r3, #12]
-	str	r10, [sp, #4]
-.L46:
-	ldr	r6, [fp, r8, lsl #2]
-	and	r7, r6, #7
-	lsr	r3, r6, #16
-	and	r3, r3, ip, lsr r1
-	add	r1, r1, r7
-	lsr	r5, r6, #3
-	cmp	r1, #31
-	lsl	r6, r6, #16
-	and	r5, r5, #31
-	add	r6, r3, r6, lsr #24
-	bhi	.L113
-	ldr	r8, [fp, r6, lsl #2]
-	lsl	r3, r8, #1
-	and	r7, r8, #7
-	and	r3, r3, #496
-	lsr	r6, r8, #16
-	orr	r5, r3, r5
-	add	r3, r1, r7
-	and	r6, r6, ip, lsr r1
-	lsl	r8, r8, #16
-	cmp	r3, #31
-	add	r6, r6, r8, lsr #24
-	bls	.L5
-	subs	r3, r3, #32
-	mvnne	r1, #0
-	ldr	ip, [lr], #4
-	subne	r7, r7, r3
-	bicne	r1, ip, r1, lsl r3
-	addne	r6, r6, r1, lsl r7
-.L5:
-	tst	r5, #128
-	beq	.L6
-	ldr	r6, [fp, r6, lsl #2]
-	and	r8, r6, #7
-	lsr	r7, r6, #16
-	and	r7, r7, ip, lsr r3
-	add	r3, r3, r8
-	lsr	r1, r6, #3
-	cmp	r3, #31
-	lsl	r6, r6, #16
-	add	r6, r7, r6, lsr #24
-	eor	r5, r5, #128
-	and	r7, r1, #31
-	bhi	.L114
-	ldr	r8, [fp, r6, lsl #2]
-	lsl	r6, r8, #1
-	and	r6, r6, #496
-	and	r1, r8, #7
-	orr	r7, r6, r7
-	lsr	r6, r8, #16
-	and	r6, r6, ip, lsr r3
-	add	r3, r1, r3
-	lsl	r8, r8, #16
-	cmp	r3, #31
-	add	r6, r6, r8, lsr #24
-	bls	.L9
-	subs	r3, r3, #32
-	mvnne	r8, #0
-	ldr	ip, [lr], #4
-	subne	r1, r1, r3
-	bicne	r8, ip, r8, lsl r3
-	addne	r6, r6, r8, lsl r1
+	lsr	r0, lr, #18
+	and	r0, r0, #63
+	str	r0, [sp, #12]
+	lsr	r0, lr, #24
+	and	r0, r0, #63
+	str	r0, [sp, #16]
+	lsr	r0, ip, #6
+	and	r0, r0, #63
+	str	r0, [sp, #24]
+	lsr	r0, ip, #12
+	and	r0, r0, #63
+	str	r0, [sp, #28]
+	lsr	r0, ip, #18
+	and	r0, r0, #63
+	str	r0, [sp, #32]
+	lsr	r0, ip, #24
+	and	r0, r0, #63
+	str	r0, [sp, #36]
+	lsr	r0, r2, #6
+	and	r0, r0, #63
+	str	r0, [sp, #44]
+	lsr	r0, r2, #12
+	and	r0, r0, #63
+	str	r0, [sp, #48]
+	lsr	r0, r2, #18
+	and	r0, r0, #63
+	str	r0, [sp, #52]
+	lsr	r0, r2, #24
+	and	r2, r2, #63
+	str	r2, [sp, #40]
+	and	lr, lr, #63
+	and	ip, ip, #63
+	and	r2, r0, #63
+	ldr	r6, .L25
+	str	lr, [sp]
+	str	ip, [sp, #20]
+	str	r2, [sp, #56]
+.L10:
+	ldr	r2, [r5], #4
+	cmp	r2, #1
+	beq	.L2
+	cmp	r2, #2
+	beq	.L3
+	cmp	r2, #0
+	beq	.L4
+	mov	lr, r1
+	ldr	r0, [r6, r2, lsl #2]
+	orr	r0, r0, r3
+	str	r0, [lr], #8
+	add	r8, r6, r2, lsl #2
+	sub	r4, r2, #2
+	lsl	ip, r2, #2
+	ldr	r2, [r8, #4]
+	cmp	r4, #10
+	orr	r2, r2, r3
+	str	r2, [r1, #4]
+	add	r7, r8, #8
+	bls	.L11
+	add	r2, ip, #8
+	add	r0, r6, r2
+	add	r2, ip, #12
+	orr	r8, lr, r0
+	add	r2, r6, r2
+	subs	r2, lr, r2
+	and	r8, r8, #7
+	movne	r2, #1
+	cmp	r8, #0
+	movne	r2, #0
+	cmp	r2, #0
+	bne	.L24
+.L8:
+	ldr	r0, [r7], #4
+	add	r2, r2, #1
+	orr	r0, r0, r3
+	cmp	r4, r2
+	str	r0, [lr], #4
+	bhi	.L8
 .L9:
-	add	r5, r5, r7, lsl #7
-.L6:
-	ldr	r1, [fp, r6, lsl #2]
-	and	r8, r1, #7
-	lsr	r7, r1, #16
-	and	r7, r7, ip, lsr r3
-	add	r3, r3, r8
-	lsr	r6, r1, #3
-	cmp	r3, #31
-	lsl	r1, r1, #16
-	add	r7, r7, r1, lsr #24
-	and	r6, r6, #31
-	bhi	.L115
-	ldr	r7, [fp, r7, lsl #2]
-	lsl	r1, r7, #1
-	and	r1, r1, #496
-	orr	r1, r1, r6
-	and	r8, r7, #7
-	str	r1, [sp]
-	lsr	r1, r7, #16
-	and	r1, r1, ip, lsr r3
-	add	r3, r3, r8
-	lsl	r7, r7, #16
-	cmp	r3, #31
-	add	r1, r1, r7, lsr #24
-	bls	.L12
-	subs	r3, r3, #32
-	mvnne	r6, #0
-	ldr	ip, [lr], #4
-	subne	r8, r8, r3
-	bicne	r7, ip, r6, lsl r3
-	addne	r1, r1, r7, lsl r8
-.L12:
-	ldr	r6, [sp]
-	tst	r6, #128
-	beq	.L13
-	ldr	r9, [fp, r1, lsl #2]
-	and	r8, r9, #7
-	lsr	r1, ip, r3
-	add	r3, r3, r8
-	and	r1, r1, r9, lsr #16
-	lsr	r7, r9, #3
-	cmp	r3, #31
-	lsl	r9, r9, #16
-	eor	r6, r6, #128
-	add	r1, r1, r9, lsr #24
-	and	r7, r7, #31
-	bhi	.L116
-	ldr	r9, [fp, r1, lsl #2]
-	lsl	r1, r9, #1
-	and	r1, r1, #496
-	and	r8, r9, #7
-	orr	r7, r1, r7
-	lsr	r1, r9, #16
-	and	r1, r1, ip, lsr r3
-	add	r3, r3, r8
-	lsl	r9, r9, #16
-	cmp	r3, #31
-	add	r1, r1, r9, lsr #24
-	bls	.L16
-	subs	r3, r3, #32
-	mvnne	r9, #0
-	ldr	ip, [lr], #4
-	subne	r8, r8, r3
-	bicne	r9, ip, r9, lsl r3
-	addne	r1, r1, r9, lsl r8
-.L16:
-	add	r6, r6, r7, lsl #7
-	str	r6, [sp]
-.L13:
-	ldr	r8, [r2, r1, lsl #2]
-	add	r7, r0, r8, lsr #3
-	and	r0, r8, #7
-	lsr	r9, r8, #16
-	add	r1, r3, r0
-	and	r9, r9, ip, lsr r3
-	lsl	r8, r8, #16
-	cmp	r1, #31
-	and	r7, r7, #15
-	add	r8, r9, r8, lsr #24
-	bhi	.L117
-	ldr	r9, [r2, r8, lsl #2]
-	lsr	r3, r9, #16
-	and	r8, r9, #7
-	add	r0, r7, r9, lsr #3
-	and	r10, r3, ip, lsr r1
-	add	r1, r1, r8
-	and	r0, r0, #15
-	lsl	r9, r9, #16
-	cmp	r1, #31
-	orr	r7, r7, r0, lsl #4
-	add	r3, r10, r9, lsr #24
-	bhi	.L118
-	ldr	r8, [r2, r3, lsl #2]
-	add	r0, r0, r8, lsr #3
-	and	r0, r0, #15
-	lsr	r9, r8, #16
-	orr	r3, r7, r0, lsl #8
-	and	r7, r8, #7
-	and	r9, r9, ip, lsr r1
-	add	r1, r1, r7
-	lsl	r8, r8, #16
-	cmp	r1, #31
-	add	r8, r9, r8, lsr #24
-	bhi	.L119
-	ldr	r7, [r2, r8, lsl #2]
-	and	r9, r7, #7
-	lsr	r8, r7, #16
-	add	r0, r0, r7, lsr #3
-	and	r8, r8, ip, lsr r1
-	add	r1, r1, r9
-	and	r0, r0, #15
-	lsl	r7, r7, #16
-	cmp	r1, #31
-	orr	r3, r3, r0, lsl #12
-	add	r8, r8, r7, lsr #24
-	bls	.L19
-	subs	r1, r1, #32
-	mvnne	r7, #0
-	ldr	ip, [lr], #4
-	subne	r9, r9, r1
-	bicne	r7, ip, r7, lsl r1
-	addne	r8, r8, r7, lsl r9
-.L19:
-	cmp	r5, #0
-	and	r0, r0, #255
-	and	r1, r1, #255
-	beq	.L120
-.L24:
-	ldr	r6, [sp]
-	cmp	r6, #1
-	beq	.L34
-	mov	r7, r4
-	strh	r3, [r7], #2	@ movhi
-	sub	r3, r5, #1
-	cmp	r3, #8
-	lsl	r9, r6, #1
-	bls	.L35
-	rsb	r3, r9, #2
-	add	r3, r4, r3
-	orr	r10, r7, r3
-	tst	r10, #3
-	beq	.L121
-.L35:
-	mov	r3, r4
-	ldr	r6, [sp]
-	rsb	r9, r6, #-2147483648
-	sub	r6, r5, r6
-	add	r4, r4, r9, lsl #1
-	add	r6, r3, r6, lsl #1
-.L42:
-	ldrh	r9, [r4, #2]!
-	cmp	r4, r6
-	strh	r9, [r3, #2]!	@ movhi
-	bne	.L42
-.L43:
-	add	r4, r7, r5, lsl #1
-.L25:
-	ldr	r3, [sp, #4]
-	ldr	r5, [sp, #8]
-	add	r3, r3, #1
-	cmp	r5, r3
-	str	r3, [sp, #4]
-	bne	.L46
-	ldr	r3, .L125
-	stm	r3, {r8, lr}
-	str	ip, [r3, #12]
-	strb	r0, [r3, #8]
-	strb	r1, [r3, #9]
-.L1:
-	add	sp, sp, #12
+	add	r1, r1, ip
+.L4:
+	add	r3, r3, #8
+	cmp	r3, #128
+	bne	.L10
+	add	sp, sp, #64
 	@ sp needed
 	pop	{r4, r5, r6, r7, r8, r9, r10, fp, lr}
 	bx	lr
-.L117:
-	subs	r1, r1, #32
-	mvnne	r3, #0
-	ldr	ip, [lr], #4
-	subne	r0, r0, r1
-	bicne	r3, ip, r3, lsl r1
-	addne	r8, r8, r3, lsl r0
-	ldr	r0, [r2, r8, lsl #2]
-	lsr	r3, r0, #16
-	lsl	r8, r0, #16
-	and	r3, r3, ip, lsr r1
-	add	r3, r3, r8, lsr #24
-	ldr	r8, [r2, r3, lsl #2]
-	and	r10, r0, #7
-	add	r0, r7, r0, lsr #3
-	and	r0, r0, #15
-	orr	r3, r7, r0, lsl #4
-	add	r0, r0, r8, lsr #3
-	and	r0, r0, #15
-	add	r10, r10, r1
-	orr	r3, r3, r0, lsl #8
-.L111:
-	lsr	r1, r8, #16
-	lsl	r7, r8, #16
-	and	r1, r1, ip, lsr r10
-	add	r1, r1, r7, lsr #24
-	and	r8, r8, #7
-	ldr	r1, [r2, r1, lsl #2]
-	add	r9, r8, r10
-.L109:
-	add	r0, r0, r1, lsr #3
-	lsr	r8, r1, #16
-	lsl	r7, r1, #16
-	and	r1, r1, #7
-	and	r0, r0, #15
-	and	r8, r8, ip, lsr r9
-	add	r1, r1, r9
-	cmp	r5, #0
-	orr	r3, r3, r0, lsl #12
-	add	r8, r8, r7, lsr #24
-	and	r0, r0, #255
-	and	r1, r1, #255
-	bne	.L24
-.L120:
-	mov	r6, r4
-	ldr	r4, [sp]
-	strh	r3, [r6], #2	@ movhi
-	cmp	r4, #1
-	sub	r7, r4, #1
-	mov	r4, r6
-	beq	.L25
-	mov	r10, r6
-	b	.L33
+.L3:
+	mov	r2, r1
+	ldr	r0, [r6, #8]
+	orr	r0, r0, r3
+	str	r0, [r2], #8
+	ldr	r0, [r6, #12]
+	orr	r0, r0, r3
+	str	r0, [r1, #4]
+	mov	r1, r2
+	b	.L4
+.L2:
+	ldr	r2, [r6, #4]
+	orr	r2, r2, r3
+	str	r2, [r1], #4
+	b	.L4
+.L24:
+	mov	r2, r0
+	mov	r9, #0
+	mov	r0, lr
+	lsr	r10, r4, #1
+.L6:
+	ldr	fp, [r2]
+	ldr	r8, [r2, #4]
+	add	r9, r9, #1
+	orr	fp, r3, fp
+	orr	r8, r3, r8
+	cmp	r10, r9
+	str	fp, [r0]
+	str	r8, [r0, #4]
+	add	r2, r2, #8
+	add	r0, r0, #8
+	bne	.L6
+	tst	r4, #1
+	bic	r4, r4, #1
+	ldrne	r2, [r7, r4, lsl #2]
+	orrne	r2, r2, r3
+	strne	r2, [lr, r4, lsl #2]
+	b	.L9
+.L11:
+	mov	r2, #0
+	b	.L8
 .L26:
-	ldr	r9, [r2, r3, lsl #2]
-	and	r8, r9, #7
-	lsr	r6, r9, #16
-	add	r3, r0, r9, lsr #3
-	and	r6, r6, ip, lsr r1
-	add	r1, r1, r8
-	and	r3, r3, #15
-	lsl	r9, r9, #16
-	cmp	r1, #31
-	orr	r0, r0, r3, lsl #4
-	add	r6, r6, r9, lsr #24
-	bhi	.L122
-	ldr	r6, [r2, r6, lsl #2]
-	add	r3, r3, r6, lsr #3
-	and	r3, r3, #15
-	lsr	r9, r6, #16
-	orr	r8, r0, r3, lsl #8
-	and	r0, r6, #7
-	and	r9, r9, ip, lsr r1
-	add	r1, r1, r0
-	lsl	r6, r6, #16
-	cmp	r1, #31
-	add	r6, r9, r6, lsr #24
-	bhi	.L123
-	ldr	r6, [r2, r6, lsl #2]
-	add	r3, r3, r6, lsr #3
-	and	r0, r3, #15
-	and	r9, r6, #7
-	orr	r3, r8, r0, lsl #12
-	lsr	r8, r6, #16
-	and	r8, r8, ip, lsr r1
-	add	r1, r1, r9
-	lsl	r6, r6, #16
-	cmp	r1, #31
-	add	r8, r8, r6, lsr #24
-	bls	.L28
-	subs	r1, r1, #32
-	mvnne	r6, #0
-	ldr	ip, [lr], #4
-	subne	r9, r9, r1
-	bicne	r6, ip, r6, lsl r1
-	addne	r8, r8, r6, lsl r9
-.L28:
-	add	r5, r5, #1
-	cmp	r5, r7
-	strh	r3, [r4], #2	@ movhi
-	and	r0, r0, #255
-	and	r1, r1, #255
-	beq	.L124
-.L33:
-	ldr	r3, [r2, r8, lsl #2]
-	and	r6, r3, #7
-	lsr	r8, r3, #16
-	and	r8, r8, ip, lsr r1
-	add	r1, r1, r6
-	add	r0, r0, r3, lsr #3
-	cmp	r1, #31
-	lsl	r3, r3, #16
-	and	r0, r0, #15
-	add	r3, r8, r3, lsr #24
-	bls	.L26
-	subs	r1, r1, #32
-	mvnne	r8, #0
-	ldr	ip, [lr], #4
-	subne	r6, r6, r1
-	bicne	r8, ip, r8, lsl r1
-	addne	r3, r3, r8, lsl r6
-	ldr	r3, [r2, r3, lsl #2]
-	lsr	r6, r3, #16
-	lsl	r8, r3, #16
-	and	r6, r6, ip, lsr r1
-	add	r6, r6, r8, lsr #24
-	ldr	r6, [r2, r6, lsl #2]
-	and	r8, r3, #7
-	add	r3, r0, r3, lsr #3
-	add	r8, r8, r1
-	and	r1, r3, #15
-	orr	r3, r0, r1, lsl #4
-	add	r0, r1, r6, lsr #3
-	lsr	r1, r6, #16
-	lsl	r9, r6, #16
-	and	r1, r1, ip, lsr r8
-	add	r1, r1, r9, lsr #24
-	ldr	r1, [r2, r1, lsl #2]
-	and	r0, r0, #15
-	orr	r3, r3, r0, lsl #8
-	and	r6, r6, #7
-	add	r0, r0, r1, lsr #3
-	add	r6, r6, r8
-	and	r0, r0, #15
-.L110:
+	.align	2
+.L25:
+	.word	.LANCHOR0
+	.size	BuildDecompressionTable, .-BuildDecompressionTable
+	.align	2
+	.syntax unified
+	.arm
+	.type	SwitchToArmCallBuildDecompressionTable, %function
+SwitchToArmCallBuildDecompressionTable:
+	@ Function supports interworking.
+	@ args = 0, pretend = 0, frame = 0
+	@ frame_needed = 0, uses_anonymous_args = 0
+	@ link register save eliminated.
+	bx	r2	@ indirect register sibling call
+	.size	SwitchToArmCallBuildDecompressionTable, .-SwitchToArmCallBuildDecompressionTable
+	.align	2
+	.syntax unified
+	.arm
+	.type	Mode5Loop, %function
+Mode5Loop:
+	@ Function supports interworking.
+	@ args = 0, pretend = 0, frame = 8
+	@ frame_needed = 0, uses_anonymous_args = 0
+	push	{r4, r5, r6, r7, r8, r9, r10, fp, lr}
+	mov	ip, #0
+	mov	fp, r1
+	ldr	lr, .L145
+	sub	sp, sp, #8
+	add	r4, lr, #8
+	ldm	lr, {r5, r6}
+	str	r0, [sp]
+	ldm	r4, {r4, lr}
+.L71:
+	ldr	r1, [fp, r4, lsl #2]
+	and	r4, r1, #7
+	lsr	r7, r1, #16
+	and	r7, r7, r6, lsr ip
+	add	ip, ip, r4
+	lsr	r0, r1, #3
+	cmp	ip, #31
+	lsl	r1, r1, #16
+	add	r1, r7, r1, lsr #24
+	and	r0, r0, #31
+	bhi	.L133
+	ldr	r4, [fp, r1, lsl #2]
+	lsl	r1, r4, #1
+	and	r1, r1, #496
+	and	r7, r4, #7
+	orr	r0, r1, r0
+	lsr	r1, r4, #16
+	and	r1, r1, r6, lsr ip
+	add	ip, ip, r7
+	lsl	r4, r4, #16
+	cmp	ip, #31
+	add	r1, r1, r4, lsr #24
+	bls	.L31
+	subs	ip, ip, #32
+	mvnne	r4, #0
+	ldr	r6, [r5], #4
+	subne	r7, r7, ip
+	bicne	r4, r6, r4, lsl ip
+	addne	r1, r1, r4, lsl r7
+.L31:
+	tst	r0, #128
+	beq	.L32
+	ldr	r1, [fp, r1, lsl #2]
+	and	r7, r1, #7
 	lsr	r8, r1, #16
-	lsl	r9, r1, #16
-	and	r8, r8, ip, lsr r6
-	and	r1, r1, #7
-	orr	r3, r3, r0, lsl #12
-	add	r8, r8, r9, lsr #24
-	add	r1, r1, r6
-	b	.L28
-.L115:
-	subs	r3, r3, #32
-	mvnne	r1, #0
-	ldr	ip, [lr], #4
-	subne	r8, r8, r3
-	bicne	r1, ip, r1, lsl r3
-	addne	r7, r7, r1, lsl r8
-	ldr	r7, [fp, r7, lsl #2]
+	and	r8, r8, r6, lsr ip
+	add	ip, ip, r7
+	lsr	r4, r1, #3
+	cmp	ip, #31
+	lsl	r1, r1, #16
+	eor	r0, r0, #128
+	add	r1, r8, r1, lsr #24
+	and	r4, r4, #31
+	bhi	.L134
+	ldr	r7, [fp, r1, lsl #2]
 	lsl	r1, r7, #1
 	and	r1, r1, #496
-	orr	r1, r1, r6
-	str	r1, [sp]
+	and	r8, r7, #7
+	orr	r4, r1, r4
 	lsr	r1, r7, #16
-	and	r1, r1, ip, lsr r3
+	and	r1, r1, r6, lsr ip
+	add	ip, r8, ip
+	lsl	r7, r7, #16
+	cmp	ip, #31
+	add	r1, r1, r7, lsr #24
+	bls	.L35
+	subs	ip, ip, #32
+	mvnne	r7, #0
+	ldr	r6, [r5], #4
+	subne	r8, r8, ip
+	bicne	r7, r6, r7, lsl ip
+	addne	r1, r1, r7, lsl r8
+.L35:
+	add	r0, r0, r4, lsl #7
+.L32:
+	ldr	r4, [fp, r1, lsl #2]
+	and	r8, r4, #7
+	lsr	r7, r4, #16
+	and	r7, r7, r6, lsr ip
+	add	ip, ip, r8
+	lsr	r1, r4, #3
+	cmp	ip, #31
+	lsl	r4, r4, #16
+	and	r1, r1, #31
+	add	r4, r7, r4, lsr #24
+	bhi	.L135
+	ldr	r8, [fp, r4, lsl #2]
+	lsl	r4, r8, #1
+	and	r4, r4, #496
+	and	r7, r8, #7
+	orr	r1, r4, r1
+	lsr	r4, r8, #16
+	and	r4, r4, r6, lsr ip
+	add	ip, ip, r7
+	lsl	r8, r8, #16
+	cmp	ip, #31
+	add	r4, r4, r8, lsr #24
+	bls	.L38
+	subs	ip, ip, #32
+	mvnne	r8, #0
+	ldr	r6, [r5], #4
+	subne	r7, r7, ip
+	bicne	r8, r6, r8, lsl ip
+	addne	r4, r4, r8, lsl r7
+.L38:
+	tst	r1, #128
+	beq	.L39
+	ldr	r9, [fp, r4, lsl #2]
+	and	r8, r9, #7
+	lsr	r4, r6, ip
+	add	ip, ip, r8
+	and	r4, r4, r9, lsr #16
+	lsr	r7, r9, #3
+	cmp	ip, #31
+	lsl	r9, r9, #16
+	eor	r1, r1, #128
+	add	r4, r4, r9, lsr #24
+	and	r7, r7, #31
+	bhi	.L136
+	ldr	r9, [fp, r4, lsl #2]
+	lsl	r4, r9, #1
+	and	r4, r4, #496
+	and	r8, r9, #7
+	orr	r7, r4, r7
+	lsr	r4, r9, #16
+	and	r4, r4, r6, lsr ip
+	add	ip, ip, r8
+	lsl	r9, r9, #16
+	cmp	ip, #31
+	add	r4, r4, r9, lsr #24
+	bls	.L42
+	subs	ip, ip, #32
+	mvnne	r9, #0
+	ldr	r6, [r5], #4
+	subne	r8, r8, ip
+	bicne	r9, r6, r9, lsl ip
+	addne	r4, r4, r9, lsl r8
+.L42:
+	add	r1, r1, r7, lsl #7
+.L39:
+	ldr	r4, [r2, r4, lsl #2]
+	add	r7, lr, r4, lsr #3
+	and	r8, r4, #7
+	lsr	lr, r4, #16
+	and	lr, lr, r6, lsr ip
+	add	ip, ip, r8
+	lsl	r4, r4, #16
+	cmp	ip, #31
+	and	r7, r7, #15
+	add	r4, lr, r4, lsr #24
+	bhi	.L137
+	ldr	r9, [r2, r4, lsl #2]
+	and	r8, r9, #7
+	lsr	r4, r9, #16
+	add	lr, r7, r9, lsr #3
+	and	r4, r4, r6, lsr ip
+	add	ip, ip, r8
+	and	lr, lr, #15
+	lsl	r9, r9, #16
+	cmp	ip, #31
+	orr	r7, r7, lr, lsl #4
+	add	r4, r4, r9, lsr #24
+	bhi	.L138
+	ldr	r4, [r2, r4, lsl #2]
+	and	r8, r4, #7
+	lsr	r9, r4, #16
+	add	lr, lr, r4, lsr #3
+	and	r9, r9, r6, lsr ip
+	add	ip, ip, r8
+	and	lr, lr, #15
+	lsl	r4, r4, #16
+	cmp	ip, #31
+	orr	r7, r7, lr, lsl #8
+	add	r4, r9, r4, lsr #24
+	bhi	.L139
+	ldr	r8, [r2, r4, lsl #2]
+	and	r9, r8, #7
+	lsr	r4, r8, #16
+	add	lr, lr, r8, lsr #3
+	and	r4, r4, r6, lsr ip
+	add	ip, ip, r9
+	and	lr, lr, #15
+	lsl	r8, r8, #16
+	cmp	ip, #31
+	orr	r7, r7, lr, lsl #12
+	add	r4, r4, r8, lsr #24
+	bls	.L45
+	subs	ip, ip, #32
+	mvnne	r8, #0
+	ldr	r6, [r5], #4
+	subne	r9, r9, ip
+	bicne	r8, r6, r8, lsl ip
+	addne	r4, r4, r8, lsl r9
+.L45:
+	cmp	r0, #0
+	beq	.L140
+.L50:
+	cmp	r1, #1
+	beq	.L141
+	mov	r8, r3
+	strh	r7, [r8], #2	@ movhi
+	add	r0, r8, r0, lsl #1
+	sub	r9, r0, r3
+	sub	r9, r9, #4
+	cmp	r9, #16
+	sub	r7, r8, r1, lsl #1
+	bls	.L69
+	rsb	r1, r1, #1
+	add	r1, r3, r1, lsl #1
+	orr	r10, r8, r1
+	tst	r10, #3
+	beq	.L142
+.L69:
+	ldrh	r3, [r7], #2
+	strh	r3, [r8], #2	@ movhi
+	cmp	r8, r0
+	bne	.L69
+.L70:
+	mov	r3, r0
+.L51:
+	ldr	r1, [sp]
+	cmp	r3, r1
+	bne	.L71
+	ldr	r3, .L145
+	str	lr, [r3, #12]
+	str	r4, [r3, #8]
+	add	sp, sp, #8
+	@ sp needed
+	pop	{r4, r5, r6, r7, r8, r9, r10, fp, lr}
+	bx	lr
+.L135:
+	subs	ip, ip, #32
+	mvnne	r7, #0
+	ldr	r6, [r5], #4
+	subne	r8, r8, ip
+	bicne	r7, r6, r7, lsl ip
+	addne	r4, r4, r7, lsl r8
+	ldr	r7, [fp, r4, lsl #2]
+	lsl	r4, r7, #1
+	and	r4, r4, #496
+	orr	r1, r4, r1
+	lsr	r4, r7, #16
+	and	r4, r4, r6, lsr ip
+	lsl	r8, r7, #16
+	and	r7, r7, #7
+	add	r4, r4, r8, lsr #24
+	add	ip, r7, ip
+	b	.L38
+.L133:
+	subs	ip, ip, #32
+	mvnne	r7, #0
+	ldr	r6, [r5], #4
+	subne	r4, r4, ip
+	bicne	r7, r6, r7, lsl ip
+	addne	r1, r1, r7, lsl r4
+	ldr	r4, [fp, r1, lsl #2]
+	lsl	r1, r4, #1
+	and	r1, r1, #496
+	orr	r0, r1, r0
+	lsr	r1, r4, #16
+	and	r1, r1, r6, lsr ip
+	lsl	r7, r4, #16
+	and	r4, r4, #7
+	add	r1, r1, r7, lsr #24
+	add	ip, r4, ip
+	b	.L31
+.L137:
+	subs	ip, ip, #32
+	mvnne	lr, #0
+	ldr	r6, [r5], #4
+	subne	r8, r8, ip
+	bicne	lr, r6, lr, lsl ip
+	addne	r4, r4, lr, lsl r8
+	ldr	lr, [r2, r4, lsl #2]
+	lsr	r4, lr, #16
+	lsl	r8, lr, #16
+	and	r4, r4, r6, lsr ip
+	add	r4, r4, r8, lsr #24
+	ldr	r4, [r2, r4, lsl #2]
+	and	r8, lr, #7
+	add	r8, r8, ip
+	add	ip, r7, lr, lsr #3
+	lsr	lr, r4, #16
+	lsl	r9, r4, #16
+	and	lr, lr, r6, lsr r8
+	and	ip, ip, #15
+	add	lr, lr, r9, lsr #24
+	ldr	r9, [r2, lr, lsl #2]
+	orr	r7, r7, ip, lsl #4
+	add	ip, ip, r4, lsr #3
+	and	ip, ip, #15
+	and	r4, r4, #7
+	add	r8, r4, r8
+	orr	r7, r7, ip, lsl #8
+	lsr	r4, r9, #16
+	add	ip, ip, r9, lsr #3
+	and	lr, ip, #15
+	and	r4, r4, r6, lsr r8
+	lsl	ip, r9, #16
+	add	r4, r4, ip, lsr #24
+	cmp	r0, #0
+	and	ip, r9, #7
+	orr	r7, r7, lr, lsl #12
+	add	ip, ip, r8
+	bne	.L50
+.L140:
+	mov	r0, r3
+	strh	r7, [r0], #2	@ movhi
+	sub	r1, r1, #-2147483647
+	add	r3, r0, r1, lsl #1
+	cmp	r0, r3
+	bne	.L59
+	b	.L51
+.L52:
+	ldr	r8, [r2, r1, lsl #2]
+	lsr	r4, r8, #16
+	and	r7, r8, #7
+	and	r9, r4, r6, lsr ip
+	add	r1, lr, r8, lsr #3
+	add	ip, ip, r7
+	and	r1, r1, #15
+	lsl	r4, r8, #16
+	cmp	ip, #31
+	orr	lr, lr, r1, lsl #4
+	add	r4, r9, r4, lsr #24
+	bhi	.L143
+	ldr	r7, [r2, r4, lsl #2]
+	add	r1, r1, r7, lsr #3
+	and	r1, r1, #15
+	lsr	r4, r7, #16
+	orr	r8, lr, r1, lsl #8
+	and	lr, r7, #7
+	and	r9, r4, r6, lsr ip
+	add	ip, ip, lr
+	lsl	r4, r7, #16
+	cmp	ip, #31
+	add	r4, r9, r4, lsr #24
+	bhi	.L144
+	ldr	r7, [r2, r4, lsl #2]
+	and	r9, r7, #7
+	lsr	r4, r7, #16
+	add	r1, r1, r7, lsr #3
+	and	r4, r4, r6, lsr ip
+	add	ip, ip, r9
+	and	lr, r1, #15
+	cmp	ip, #31
+	lsl	r1, r7, #16
+	orr	r8, r8, lr, lsl #12
+	add	r4, r4, r1, lsr #24
+	bls	.L54
+	subs	ip, ip, #32
+	mvnne	r1, #0
+	ldr	r6, [r5], #4
+	subne	r9, r9, ip
+	bicne	r1, r6, r1, lsl ip
+	addne	r4, r4, r1, lsl r9
+.L54:
+	strh	r8, [r0], #2	@ movhi
+	cmp	r3, r0
+	beq	.L51
+.L59:
+	ldr	r1, [r2, r4, lsl #2]
+	and	r7, r1, #7
+	lsr	r4, r1, #16
+	and	r4, r4, r6, lsr ip
+	add	ip, r7, ip
+	add	lr, lr, r1, lsr #3
+	cmp	ip, #31
+	lsl	r1, r1, #16
+	and	lr, lr, #15
+	add	r1, r4, r1, lsr #24
+	bls	.L52
+	subs	ip, ip, #32
+	mvnne	r4, #0
+	ldr	r6, [r5], #4
+	subne	r7, r7, ip
+	bicne	r4, r6, r4, lsl ip
+	addne	r1, r1, r4, lsl r7
+	ldr	r1, [r2, r1, lsl #2]
+	lsr	r4, r1, #16
+	lsl	r7, r1, #16
+	and	r4, r4, r6, lsr ip
+	add	r4, r4, r7, lsr #24
+	ldr	r7, [r2, r4, lsl #2]
+	and	r4, r1, #7
+	add	r1, lr, r1, lsr #3
+	and	r1, r1, #15
+	orr	lr, lr, r1, lsl #4
+	add	r1, r1, r7, lsr #3
+	add	r4, r4, ip
+	and	r1, r1, #15
+	lsr	ip, r7, #16
+	orr	r8, lr, r1, lsl #8
+	and	ip, ip, r6, lsr r4
+	lsl	lr, r7, #16
+	add	ip, ip, lr, lsr #24
+	and	r7, r7, #7
+	ldr	ip, [r2, ip, lsl #2]
+	add	r7, r7, r4
+.L132:
+	add	r1, r1, ip, lsr #3
+	lsr	r4, ip, #16
+	and	lr, r1, #15
+	and	r4, r4, r6, lsr r7
+	lsl	r1, ip, #16
+	and	ip, ip, #7
+	orr	r8, r8, lr, lsl #12
+	add	r4, r4, r1, lsr #24
+	add	ip, ip, r7
+	b	.L54
+.L143:
+	subs	r9, ip, #32
+	mvnne	ip, #0
+	ldr	r6, [r5], #4
+	subne	r7, r7, r9
+	bicne	ip, r6, ip, lsl r9
+	addne	r4, r4, ip, lsl r7
+	ldr	r4, [r2, r4, lsl #2]
+	add	r1, r1, r4, lsr #3
+	lsr	ip, r4, #16
+	and	r1, r1, #15
+	orr	r8, lr, r1, lsl #8
+	and	ip, ip, r6, lsr r9
+	lsl	lr, r4, #16
+	add	ip, ip, lr, lsr #24
+	and	r4, r4, #7
+	ldr	ip, [r2, ip, lsl #2]
+	add	r7, r4, r9
+	b	.L132
+.L144:
+	subs	ip, ip, #32
+	mvnne	r7, #0
+	ldr	r6, [r5], #4
+	subne	lr, lr, ip
+	bicne	r7, r6, r7, lsl ip
+	addne	r4, r4, r7, lsl lr
+	ldr	r7, [r2, r4, lsl #2]
+	add	lr, r1, r7, lsr #3
+	lsr	r4, r7, #16
+	and	r4, r4, r6, lsr ip
+	lsl	r1, r7, #16
+	and	lr, lr, #15
+	and	r7, r7, #7
+	orr	r8, r8, lr, lsl #12
+	add	r4, r4, r1, lsr #24
+	add	ip, r7, ip
+	b	.L54
+.L141:
+	lsr	r1, r3, #1
+	cmp	r0, #5
+	and	r1, r1, #1
+	str	r1, [sp, #4]
+	add	r0, r0, #1
+	bls	.L61
+	cmp	r1, #0
+	ldr	r1, [sp, #4]
+	sub	r8, r0, r1
+	lsr	r9, r8, #1
+	add	r1, r3, r1, lsl #1
+	strhne	r7, [r3]	@ movhi
+	add	r9, r1, r9, lsl #2
+	orr	r10, r7, r7, lsl #16
+.L63:
+	str	r10, [r1], #4
+	cmp	r9, r1
+	bne	.L63
+	tst	r8, #1
+	beq	.L64
+	ldr	r1, [sp, #4]
+	bic	r8, r8, #1
+	add	r8, r8, r1
+	add	r1, r8, #1
+	cmp	r0, r1
+	lsl	r1, r8, #1
+	strh	r7, [r3, r1]	@ movhi
+	bls	.L64
+.L72:
+	add	r9, r8, #2
+	add	r1, r3, r1
+	cmp	r9, r0
+	strh	r7, [r1, #2]	@ movhi
+	bcs	.L64
+	add	r9, r8, #3
+	cmp	r0, r9
+	strh	r7, [r1, #4]	@ movhi
+	bls	.L64
+	add	r9, r8, #4
+	cmp	r0, r9
+	strh	r7, [r1, #6]	@ movhi
+	bls	.L64
+	add	r8, r8, #5
+	cmp	r0, r8
+	strh	r7, [r1, #8]	@ movhi
+	strhhi	r7, [r1, #10]	@ movhi
+.L64:
+	add	r3, r3, r0, lsl #1
+	b	.L51
+.L138:
+	subs	ip, ip, #32
+	mvnne	r9, #0
+	ldr	r6, [r5], #4
+	subne	r8, r8, ip
+	bicne	r9, r6, r9, lsl ip
+	addne	r4, r4, r9, lsl r8
+	ldr	r4, [r2, r4, lsl #2]
+	lsr	r8, r4, #16
+	and	r8, r8, r6, lsr ip
+	lsl	r9, r4, #16
+	add	lr, lr, r4, lsr #3
+	add	r8, r8, r9, lsr #24
+	and	lr, lr, #15
+	and	r4, r4, #7
+	ldr	r8, [r2, r8, lsl #2]
+	orr	r7, r7, lr, lsl #8
+	add	ip, r4, ip
+.L131:
+	add	lr, lr, r8, lsr #3
+	lsr	r4, r8, #16
+	and	r4, r4, r6, lsr ip
+	lsl	r9, r8, #16
+	and	lr, lr, #15
+	and	r8, r8, #7
+	orr	r7, r7, lr, lsl #12
+	add	r4, r4, r9, lsr #24
+	add	ip, r8, ip
+	b	.L45
+.L142:
+	mov	r10, r8
+	lsr	r9, r9, #1
+	add	r9, r9, #1
+	str	r9, [sp, #4]
+	lsr	r9, r9, #1
+	add	r3, r3, r9, lsl #2
+	sub	r1, r1, #4
+	add	r9, r3, #2
+.L66:
+	ldr	r3, [r1, #4]!
+	str	r3, [r10], #4
+	cmp	r10, r9
+	bne	.L66
+	ldr	r3, [sp, #4]
+	bic	r9, r3, #1
+	tst	r3, #1
+	lsl	r9, r9, #1
+	ldrhne	r3, [r7, r9]
+	strhne	r3, [r8, r9]	@ movhi
+	b	.L70
+.L136:
+	subs	ip, ip, #32
+	mvnne	r9, #0
+	ldr	r6, [r5], #4
+	subne	r8, r8, ip
+	bicne	r9, r6, r9, lsl ip
+	addne	r4, r4, r9, lsl r8
+	ldr	r8, [fp, r4, lsl #2]
+	lsl	r4, r8, #1
+	and	r4, r4, #496
+	orr	r7, r4, r7
+	lsr	r4, r8, #16
+	and	r4, r4, r6, lsr ip
+	lsl	r9, r8, #16
+	and	r8, r8, #7
+	add	r4, r4, r9, lsr #24
+	add	ip, r8, ip
+	b	.L42
+.L134:
+	subs	ip, ip, #32
+	mvnne	r8, #0
+	ldr	r6, [r5], #4
+	subne	r7, r7, ip
+	bicne	r8, r6, r8, lsl ip
+	addne	r1, r1, r8, lsl r7
+	ldr	r7, [fp, r1, lsl #2]
+	lsl	r1, r7, #1
+	and	r1, r1, #496
+	orr	r4, r1, r4
+	lsr	r1, r7, #16
+	and	r1, r1, r6, lsr ip
 	lsl	r8, r7, #16
 	and	r7, r7, #7
 	add	r1, r1, r8, lsr #24
-	add	r3, r7, r3
-	b	.L12
-.L113:
-	subs	r3, r1, #32
-	mvnne	r1, #0
-	ldr	ip, [lr], #4
-	subne	r7, r7, r3
-	bicne	r1, ip, r1, lsl r3
-	addne	r6, r6, r1, lsl r7
-	ldr	r1, [fp, r6, lsl #2]
-	lsl	r6, r1, #1
-	and	r6, r6, #496
-	orr	r5, r6, r5
-	lsr	r6, r1, #16
-	and	r6, r6, ip, lsr r3
-	lsl	r7, r1, #16
-	and	r1, r1, #7
-	add	r6, r6, r7, lsr #24
-	add	r3, r1, r3
-	b	.L5
-.L122:
-	subs	r9, r1, #32
-	mvnne	r1, #0
-	ldr	ip, [lr], #4
-	subne	r8, r8, r9
-	bicne	r1, ip, r1, lsl r9
-	addne	r6, r6, r1, lsl r8
-	ldr	r6, [r2, r6, lsl #2]
-	add	r3, r3, r6, lsr #3
-	and	r8, r3, #15
-	lsr	r1, r6, #16
-	orr	r3, r0, r8, lsl #8
-	and	r1, r1, ip, lsr r9
-	lsl	r0, r6, #16
-	add	r1, r1, r0, lsr #24
-	ldr	r1, [r2, r1, lsl #2]
-	and	r6, r6, #7
-	add	r8, r8, r1, lsr #3
-	add	r6, r6, r9
-	and	r0, r8, #15
-	b	.L110
-.L123:
-	subs	r9, r1, #32
-	mvnne	r1, #0
-	ldr	ip, [lr], #4
-	subne	r0, r0, r9
-	bicne	r1, ip, r1, lsl r9
-	addne	r6, r6, r1, lsl r0
-	ldr	r1, [r2, r6, lsl #2]
-	add	r3, r3, r1, lsr #3
-	and	r0, r3, #15
-	orr	r3, r8, r0, lsl #12
-	lsr	r8, r1, #16
-	lsl	r6, r1, #16
-	and	r8, r8, ip, lsr r9
-	and	r1, r1, #7
-	add	r8, r8, r6, lsr #24
-	add	r1, r1, r9
-	b	.L28
-.L34:
-	lsr	r6, r4, #1
-	cmp	r5, #5
-	and	r6, r6, #1
-	str	r6, [sp]
-	add	r5, r5, #1
-	bls	.L37
-	cmp	r6, #0
-	ldr	r6, [sp]
-	sub	r7, r5, r6
-	lsr	r9, r7, #1
-	add	r6, r4, r6, lsl #1
-	strhne	r3, [r4]	@ movhi
-	add	r9, r6, r9, lsl #2
-	orr	r10, r3, r3, lsl #16
-.L39:
-	str	r10, [r6], #4
-	cmp	r9, r6
-	bne	.L39
-	tst	r7, #1
-	beq	.L40
-	ldr	r6, [sp]
-	bic	r7, r7, #1
-	add	r7, r7, r6
-	add	r6, r7, #1
-	cmp	r5, r6
-	lsl	r6, r7, #1
-	strh	r3, [r4, r6]	@ movhi
-	bls	.L40
-.L47:
-	add	r9, r7, #2
-	add	r6, r4, r6
-	cmp	r5, r9
-	strh	r3, [r6, #2]	@ movhi
-	bls	.L40
-	add	r9, r7, #3
-	cmp	r5, r9
-	strh	r3, [r6, #4]	@ movhi
-	bls	.L40
-	add	r9, r7, #4
-	cmp	r5, r9
-	strh	r3, [r6, #6]	@ movhi
-	bls	.L40
-	add	r7, r7, #5
-	cmp	r5, r7
-	strh	r3, [r6, #8]	@ movhi
-	strhhi	r3, [r6, #10]	@ movhi
-.L40:
-	add	r4, r4, r5, lsl #1
-	b	.L25
-.L124:
-	ldr	r3, [sp]
-	sub	r4, r3, #-2147483647
-	add	r4, r10, r4, lsl #1
-	b	.L25
-.L118:
-	subs	r10, r1, #32
-	mvnne	r1, #0
-	ldr	ip, [lr], #4
-	subne	r8, r8, r10
-	bicne	r1, ip, r1, lsl r10
-	addne	r3, r3, r1, lsl r8
-	ldr	r8, [r2, r3, lsl #2]
-	add	r0, r0, r8, lsr #3
-	and	r0, r0, #15
-	orr	r3, r7, r0, lsl #8
-	b	.L111
-.L121:
-	mov	r6, r7
-	lsr	r10, r5, #1
-	add	r10, r4, r10, lsl #2
-	sub	r3, r3, #4
-	add	r10, r10, #2
-.L44:
-	ldr	r4, [r3, #4]!
-	str	r4, [r6], #4
-	cmp	r6, r10
-	bne	.L44
-	tst	r5, #1
-	bic	r3, r5, #1
-	rsbne	r9, r9, r3, lsl #1
-	ldrhne	r4, [r7, r9]
-	lslne	r3, r3, #1
-	strhne	r4, [r7, r3]	@ movhi
-	b	.L43
-.L114:
-	subs	r3, r3, #32
-	mvnne	r1, #0
-	ldr	ip, [lr], #4
-	subne	r8, r8, r3
-	bicne	r1, ip, r1, lsl r3
-	addne	r6, r6, r1, lsl r8
-	ldr	r1, [fp, r6, lsl #2]
-	lsl	r6, r1, #1
-	and	r6, r6, #496
-	orr	r7, r6, r7
-	lsr	r6, r1, #16
-	and	r6, r6, ip, lsr r3
-	lsl	r8, r1, #16
-	and	r1, r1, #7
-	add	r6, r6, r8, lsr #24
-	add	r3, r1, r3
-	b	.L9
-.L116:
-	subs	r3, r3, #32
+	add	ip, r7, ip
+	b	.L35
+.L139:
+	subs	ip, ip, #32
 	mvnne	r9, #0
-	ldr	ip, [lr], #4
-	subne	r8, r8, r3
-	bicne	r9, ip, r9, lsl r3
-	addne	r1, r1, r9, lsl r8
-	ldr	r8, [fp, r1, lsl #2]
-	lsl	r1, r8, #1
-	and	r1, r1, #496
-	orr	r7, r1, r7
-	lsr	r1, r8, #16
-	and	r1, r1, ip, lsr r3
-	lsl	r9, r8, #16
-	and	r8, r8, #7
-	add	r1, r1, r9, lsr #24
-	add	r3, r8, r3
-	b	.L16
-.L119:
-	subs	r9, r1, #32
-	mvnne	r1, #0
-	ldr	ip, [lr], #4
-	subne	r7, r7, r9
-	bicne	r1, ip, r1, lsl r9
-	addne	r8, r8, r1, lsl r7
-	ldr	r1, [r2, r8, lsl #2]
-	b	.L109
-.L37:
-	mov	r7, #0
-	strh	r3, [r4]	@ movhi
-	mov	r6, r7
-	b	.L47
-.L126:
+	ldr	r6, [r5], #4
+	subne	r8, r8, ip
+	bicne	r9, r6, r9, lsl ip
+	addne	r4, r4, r9, lsl r8
+	ldr	r8, [r2, r4, lsl #2]
+	b	.L131
+.L61:
+	mov	r8, #0
+	strh	r7, [r3]	@ movhi
+	mov	r1, r8
+	b	.L72
+.L146:
 	.align	2
-.L125:
-	.word	.LANCHOR0
+.L145:
+	.word	.LANCHOR1
 	.size	Mode5Loop, .-Mode5Loop
 	.align	2
 	.syntax unified
@@ -645,26 +798,6 @@ SwitchToArmCallMode5Loop:
 	ldr	ip, [sp]
 	bx	ip	@ indirect register sibling call
 	.size	SwitchToArmCallMode5Loop, .-SwitchToArmCallMode5Loop
-	.section	.iwram.code,"ax",%progbits
-	.align	2
-	.syntax unified
-	.arm
-	.type	CopyTable, %function
-CopyTable:
-	@ Function supports interworking.
-	@ args = 0, pretend = 0, frame = 0
-	@ frame_needed = 0, uses_anonymous_args = 0
-	@ link register save eliminated.
-	add	r2, r0, r2, lsl #2
-.L129:
-	ldr	ip, [r1], #4
-	orr	ip, ip, r3
-	str	ip, [r0], #4
-	cmp	r2, r0
-	bne	.L129
-	bx	lr
-	.size	CopyTable, .-CopyTable
-	.text
 	.align	1
 	.p2align 2,,3
 	.arch armv4t
@@ -672,228 +805,69 @@ CopyTable:
 	.syntax unified
 	.code	16
 	.thumb_func
-	.type	BuildDecompressionTable, %function
-BuildDecompressionTable:
-	@ Function supports interworking.
-	@ args = 0, pretend = 0, frame = 32
-	@ frame_needed = 0, uses_anonymous_args = 0
-	push	{r4, r5, r6, r7, lr}
-	mov	r7, r9
-	mov	r6, r8
-	mov	lr, r10
-	ldr	r3, [r0]
-	push	{r6, r7, lr}
-	movs	r7, #12
-	mov	r9, r3
-	movs	r3, #48
-	ldr	r6, [r0, #4]
-	ldr	r0, [r0, #8]
-	movs	r4, r1
-	lsrs	r1, r6, #28
-	ands	r7, r1
-	lsrs	r1, r0, #26
-	mov	ip, r3
-	mov	r8, r1
-	mov	r10, r7
-	mov	r1, ip
-	mov	r7, r8
-	ands	r1, r7
-	mov	ip, r1
-	mov	r1, r9
-	movs	r2, #63
-	sub	sp, sp, #32
-	mov	r5, sp
-	lsrs	r1, r1, #6
-	ands	r1, r2
-	strh	r1, [r5, #2]
-	mov	r1, r9
-	lsrs	r1, r1, #12
-	ands	r1, r2
-	strh	r1, [r5, #4]
-	mov	r1, r9
-	lsrs	r1, r1, #18
-	ands	r1, r2
-	strh	r1, [r5, #6]
-	mov	r1, r9
-	lsrs	r1, r1, #24
-	ands	r1, r2
-	strh	r1, [r5, #8]
-	lsrs	r1, r6, #6
-	ands	r1, r2
-	strh	r1, [r5, #12]
-	lsrs	r1, r6, #12
-	ands	r1, r2
-	strh	r1, [r5, #14]
-	lsrs	r1, r6, #18
-	ands	r1, r2
-	strh	r1, [r5, #16]
-	lsrs	r1, r6, #24
-	ands	r6, r2
-	strh	r6, [r5, #10]
-	movs	r6, r1
-	mov	r1, r9
-	mov	r8, r10
-	ands	r6, r2
-	strh	r6, [r5, #18]
-	lsrs	r6, r0, #6
-	ands	r6, r2
-	strh	r6, [r5, #22]
-	lsrs	r6, r0, #12
-	ands	r6, r2
-	strh	r6, [r5, #24]
-	lsrs	r6, r0, #18
-	ands	r6, r2
-	strh	r6, [r5, #26]
-	lsrs	r6, r0, #24
-	ands	r6, r2
-	ands	r0, r2
-	ands	r2, r1
-	strh	r2, [r5]
-	ldr	r2, .L148
-	add	r8, r8, ip
-	lsrs	r1, r1, #30
-	add	r1, r1, r8
-	mov	r8, r2
-	ldr	r2, .L148+4
-	strh	r6, [r5, #28]
-	movs	r3, #0
-	mov	r9, r2
-	strh	r0, [r5, #20]
-	strh	r1, [r5, #30]
-	ldr	r6, .L148+8
-	b	.L138
-.L146:
-	ldr	r1, .L148+12
-	cmp	r2, #0
-	beq	.L135
-	orrs	r1, r3
-	stmia	r4!, {r1}
-.L135:
-	adds	r3, r3, #8
-	adds	r5, r5, #2
-	cmp	r3, #128
-	beq	.L145
-.L138:
-	ldrh	r2, [r5]
-	cmp	r2, #2
-	beq	.L133
-	bls	.L146
-	cmp	r2, #3
-	bne	.L147
-	movs	r0, r6
-	ldr	r1, .L148+16
-	ldr	r2, .L148+20
-	orrs	r0, r3
-	orrs	r1, r3
-	orrs	r2, r3
-	adds	r3, r3, #8
-	str	r0, [r4]
-	str	r1, [r4, #4]
-	str	r2, [r4, #8]
-	adds	r5, r5, #2
-	adds	r4, r4, #12
-	cmp	r3, #128
-	bne	.L138
-.L145:
-	add	sp, sp, #32
-	@ sp needed
-	pop	{r5, r6, r7}
-	mov	r10, r7
-	mov	r9, r6
-	mov	r8, r5
-	pop	{r4, r5, r6, r7}
-	pop	{r0}
-	bx	r0
-.L133:
-	mov	r1, r8
-	movs	r2, r6
-	orrs	r1, r3
-	orrs	r2, r3
-	str	r1, [r4]
-	str	r2, [r4, #4]
-	adds	r4, r4, #8
-	b	.L135
-.L147:
-	mov	r1, r9
-	lsls	r7, r2, #2
-	movs	r0, r4
-	adds	r1, r7, r1
-	bl	CopyTable
-	adds	r4, r4, r7
-	b	.L135
-.L149:
-	.align	2
-.L148:
-	.word	2031621
-	.word	sYkTemplate
-	.word	2039813
-	.word	4128774
-	.word	983044
-	.word	987140
-	.size	BuildDecompressionTable, .-BuildDecompressionTable
-	.align	1
-	.p2align 2,,3
-	.syntax unified
-	.code	16
-	.thumb_func
 	.type	DecodeMode5, %function
 DecodeMode5:
 	@ Function supports interworking.
-	@ args = 0, pretend = 0, frame = 3200
+	@ args = 0, pretend = 0, frame = 3328
 	@ frame_needed = 0, uses_anonymous_args = 0
 	push	{r4, r5, r6, r7, lr}
-	mov	lr, r8
-	mov	r8, r2
-	push	{lr}
-	movs	r5, r3
-	ldr	r3, .L151
-	ldr	r4, .L151+4
-	ldr	r2, [r3, #4]
-	ldr	r6, .L151+8
-	add	sp, sp, r4
-	movs	r4, r0
-	movs	r0, r1
+	mov	lr, r9
+	mov	r7, r8
+	movs	r6, r3
+	push	{r7, lr}
+	ldr	r3, .L150
+	mov	r9, r2
+	ldr	r2, [r3]
+	ldr	r4, .L150+4
+	mov	r8, r1
 	adds	r1, r2, #4
+	add	sp, sp, r4
+	str	r1, [r3]
 	ldr	r2, [r2]
-	str	r1, [r3, #4]
-	movs	r1, r6
-	str	r2, [r3, #12]
-	bl	BuildDecompressionTable
-	ldr	r7, .L151+12
+	ldr	r4, .L150+8
+	ldr	r1, .L150+12
+	str	r2, [r3, #4]
+	subs	r2, r4, r1
+	mov	r4, sp
+	movs	r5, r0
+	movs	r0, r4
+	bl	FastUnsafeCopy32
+	ldr	r7, .L150+16
 	mov	r0, r8
 	movs	r1, r7
-	bl	BuildDecompressionTable
-	movs	r2, #3
-	mov	r8, sp
-	ldr	r0, .L151+16
-	ldr	r3, .L151+20
-	subs	r3, r3, r0
-	asrs	r1, r3, #31
-	ands	r2, r1
-	adds	r2, r2, r3
-	lsls	r2, r2, #9
-	mov	r1, r8
-	lsrs	r2, r2, #11
-	bl	CpuFastSet
-	movs	r3, r5
-	movs	r2, r7
-	movs	r1, r6
+	bl	.L152
+	ldr	r3, .L150+20
+	mov	r8, r3
+	movs	r1, r3
+	mov	r0, r9
+	bl	.L152
+	ldr	r1, .L150+24
+	ldr	r2, .L150+28
 	movs	r0, r4
-	bl	.L153
-	movs	r3, #200
+	subs	r2, r2, r1
+	bl	FastUnsafeCopy32
+	movs	r3, r6
+	mov	r2, r8
+	movs	r1, r7
+	movs	r0, r5
+	bl	.L152
+	movs	r3, #208
 	lsls	r3, r3, #4
 	add	sp, sp, r3
 	@ sp needed
-	pop	{r7}
-	mov	r8, r7
+	pop	{r6, r7}
+	mov	r9, r7
+	mov	r8, r6
 	pop	{r4, r5, r6, r7}
 	pop	{r0}
 	bx	r0
-.L152:
-	.align	2
 .L151:
-	.word	.LANCHOR0
-	.word	-3200
+	.align	2
+.L150:
+	.word	.LANCHOR1
+	.word	-3328
+	.word	SwitchToArmCallBuildDecompressionTable
+	.word	BuildDecompressionTable
 	.word	sWorkingYkTable_Lo
 	.word	sWorkingYkTable_Sym
 	.word	Mode5Loop
@@ -912,7 +886,7 @@ LZDecompressWram:
 	@ frame_needed = 0, uses_anonymous_args = 0
 	push	{r4, r5, lr}
 	sub	sp, sp, #8
-	ldr	r2, .L161
+	ldr	r2, .L160
 	movs	r5, r1
 	mov	r1, sp
 	movs	r4, r0
@@ -922,49 +896,51 @@ LZDecompressWram:
 	lsls	r2, r2, #27
 	lsrs	r2, r2, #27
 	cmp	r2, #16
-	beq	.L159
+	beq	.L158
 	mov	r3, sp
-	ldrh	r0, [r3, #4]
-	cmp	r0, #0
-	beq	.L154
+	ldrh	r3, [r3, #4]
+	cmp	r3, #0
+	beq	.L153
+	mov	r3, sp
 	ldrh	r3, [r3]
-	ldr	r1, .L161+4
+	ldr	r1, .L160+4
 	lsls	r3, r3, #21
 	lsrs	r3, r3, #26
-	str	r3, [r1]
+	str	r3, [r1, #8]
 	movs	r3, #0
-	strb	r3, [r1, #9]
-	strb	r3, [r1, #8]
-	str	r3, [r1, #12]
+	str	r3, [r1, #4]
 	cmp	r2, #5
-	beq	.L160
-.L154:
+	beq	.L159
+.L153:
 	add	sp, sp, #8
 	@ sp needed
 	pop	{r4, r5}
 	pop	{r0}
 	bx	r0
-.L159:
+.L158:
 	movs	r1, r5
 	movs	r0, r4
 	bl	LZ77UnCompWram
-	b	.L154
-.L160:
+	b	.L153
+.L159:
 	movs	r3, r4
 	adds	r3, r3, #32
 	movs	r2, r4
-	str	r3, [r1, #4]
+	str	r3, [r1]
 	movs	r1, r4
+	ldr	r0, [sp]
+	lsrs	r0, r0, #11
 	movs	r3, r5
 	adds	r2, r2, #20
 	adds	r1, r1, #8
+	adds	r0, r5, r0
 	bl	DecodeMode5
-	b	.L154
-.L162:
-	.align	2
+	b	.L153
 .L161:
+	.align	2
+.L160:
 	.word	67108866
-	.word	.LANCHOR0
+	.word	.LANCHOR1
 	.size	LZDecompressWram, .-LZDecompressWram
 	.align	1
 	.p2align 2,,3
@@ -979,7 +955,7 @@ LZDecompressVram:
 	@ frame_needed = 0, uses_anonymous_args = 0
 	push	{r4, r5, lr}
 	sub	sp, sp, #8
-	ldr	r2, .L170
+	ldr	r2, .L169
 	movs	r5, r1
 	mov	r1, sp
 	movs	r4, r0
@@ -989,49 +965,51 @@ LZDecompressVram:
 	lsls	r2, r2, #27
 	lsrs	r2, r2, #27
 	cmp	r2, #16
-	beq	.L168
+	beq	.L167
 	mov	r3, sp
-	ldrh	r0, [r3, #4]
-	cmp	r0, #0
-	beq	.L163
+	ldrh	r3, [r3, #4]
+	cmp	r3, #0
+	beq	.L162
+	mov	r3, sp
 	ldrh	r3, [r3]
-	ldr	r1, .L170+4
+	ldr	r1, .L169+4
 	lsls	r3, r3, #21
 	lsrs	r3, r3, #26
-	str	r3, [r1]
+	str	r3, [r1, #8]
 	movs	r3, #0
-	strb	r3, [r1, #9]
-	strb	r3, [r1, #8]
-	str	r3, [r1, #12]
+	str	r3, [r1, #4]
 	cmp	r2, #5
-	beq	.L169
-.L163:
+	beq	.L168
+.L162:
 	add	sp, sp, #8
 	@ sp needed
 	pop	{r4, r5}
 	pop	{r0}
 	bx	r0
-.L168:
+.L167:
 	movs	r1, r5
 	movs	r0, r4
 	bl	LZ77UnCompVram
-	b	.L163
-.L169:
+	b	.L162
+.L168:
 	movs	r3, r4
 	adds	r3, r3, #32
 	movs	r2, r4
-	str	r3, [r1, #4]
+	str	r3, [r1]
 	movs	r1, r4
+	ldr	r0, [sp]
+	lsrs	r0, r0, #11
 	movs	r3, r5
 	adds	r2, r2, #20
 	adds	r1, r1, #8
+	adds	r0, r5, r0
 	bl	DecodeMode5
-	b	.L163
-.L171:
-	.align	2
+	b	.L162
 .L170:
+	.align	2
+.L169:
 	.word	67108866
-	.word	.LANCHOR0
+	.word	.LANCHOR1
 	.size	LZDecompressVram, .-LZDecompressVram
 	.align	1
 	.p2align 2,,3
@@ -1048,11 +1026,11 @@ IsLZ77Data:
 	movs	r0, #3
 	push	{r4, lr}
 	tst	r3, r0
-	bne	.L175
+	bne	.L174
 	ldrb	r4, [r3]
 	movs	r0, #0
 	cmp	r4, #16
-	bne	.L172
+	bne	.L171
 	ldrb	r0, [r3, #2]
 	ldrb	r4, [r3, #3]
 	lsls	r0, r0, #8
@@ -1061,17 +1039,17 @@ IsLZ77Data:
 	orrs	r0, r4
 	orrs	r0, r3
 	cmp	r0, r1
-	bcc	.L175
+	bcc	.L174
 	cmp	r2, r0
-	bcc	.L175
-.L172:
+	bcc	.L174
+.L171:
 	@ sp needed
 	pop	{r4}
 	pop	{r1}
 	bx	r1
-.L175:
+.L174:
 	movs	r0, #0
-	b	.L172
+	b	.L171
 	.size	IsLZ77Data, .-IsLZ77Data
 	.align	1
 	.p2align 2,,3
@@ -1124,24 +1102,24 @@ LoadCompressedSpriteSheetByTemplate:
 	movs	r5, r1
 	sub	sp, sp, #32
 	lsls	r3, r0, #30
-	bne	.L183
+	bne	.L182
 	ldrb	r3, [r0]
 	cmp	r3, #16
-	beq	.L186
-.L183:
+	beq	.L185
+.L182:
 	movs	r0, r4
 	movs	r2, r5
 	movs	r1, #0
 	bl	LoadSpriteSheetByTemplate
 	movs	r4, r0
-.L182:
+.L181:
 	movs	r0, r4
 	add	sp, sp, #32
 	@ sp needed
 	pop	{r4, r5, r6, r7}
 	pop	{r1}
 	bx	r1
-.L186:
+.L185:
 	ldrb	r6, [r0, #2]
 	ldrb	r3, [r0, #3]
 	lsls	r6, r6, #8
@@ -1150,10 +1128,10 @@ LoadCompressedSpriteSheetByTemplate:
 	ldrb	r3, [r0, #1]
 	orrs	r6, r3
 	movs	r2, r6
-	ldr	r3, .L187
+	ldr	r3, .L186
 	subs	r2, r2, #32
 	cmp	r2, r3
-	bhi	.L183
+	bhi	.L182
 	movs	r1, #0
 	bl	malloc_and_decompress
 	mov	r3, sp
@@ -1171,10 +1149,10 @@ LoadCompressedSpriteSheetByTemplate:
 	movs	r4, r0
 	movs	r0, r7
 	bl	Free
-	b	.L182
-.L188:
-	.align	2
+	b	.L181
 .L187:
+	.align	2
+.L186:
 	.word	16352
 	.size	LoadCompressedSpriteSheetByTemplate, .-LoadCompressedSpriteSheetByTemplate
 	.align	1
@@ -1257,7 +1235,7 @@ DecompressPicFromTable:
 	push	{r4, r5, lr}
 	ldr	r5, [r0]
 	sub	sp, sp, #8
-	ldr	r2, .L198
+	ldr	r2, .L197
 	movs	r4, r1
 	movs	r0, r5
 	mov	r1, sp
@@ -1267,49 +1245,51 @@ DecompressPicFromTable:
 	lsls	r2, r2, #27
 	lsrs	r2, r2, #27
 	cmp	r2, #16
-	beq	.L196
+	beq	.L195
 	mov	r3, sp
-	ldrh	r0, [r3, #4]
-	cmp	r0, #0
-	beq	.L191
+	ldrh	r3, [r3, #4]
+	cmp	r3, #0
+	beq	.L190
+	mov	r3, sp
 	ldrh	r3, [r3]
-	ldr	r1, .L198+4
+	ldr	r1, .L197+4
 	lsls	r3, r3, #21
 	lsrs	r3, r3, #26
-	str	r3, [r1]
+	str	r3, [r1, #8]
 	movs	r3, #0
-	strb	r3, [r1, #9]
-	strb	r3, [r1, #8]
-	str	r3, [r1, #12]
+	str	r3, [r1, #4]
 	cmp	r2, #5
-	beq	.L197
-.L191:
+	beq	.L196
+.L190:
 	add	sp, sp, #8
 	@ sp needed
 	pop	{r4, r5}
 	pop	{r0}
 	bx	r0
-.L196:
+.L195:
 	movs	r1, r4
 	movs	r0, r5
 	bl	LZ77UnCompWram
-	b	.L191
-.L197:
+	b	.L190
+.L196:
 	movs	r3, r5
 	adds	r3, r3, #32
 	movs	r2, r5
-	str	r3, [r1, #4]
+	str	r3, [r1]
 	movs	r1, r5
+	ldr	r0, [sp]
+	lsrs	r0, r0, #11
 	movs	r3, r4
 	adds	r2, r2, #20
 	adds	r1, r1, #8
+	adds	r0, r4, r0
 	bl	DecodeMode5
-	b	.L191
-.L199:
-	.align	2
+	b	.L190
 .L198:
+	.align	2
+.L197:
 	.word	67108866
-	.word	.LANCHOR0
+	.word	.LANCHOR1
 	.size	DecompressPicFromTable, .-DecompressPicFromTable
 	.align	1
 	.p2align 2,,3
@@ -1324,7 +1304,7 @@ DecompressDataVram:
 	@ frame_needed = 0, uses_anonymous_args = 0
 	push	{r4, r5, lr}
 	sub	sp, sp, #8
-	ldr	r2, .L207
+	ldr	r2, .L206
 	movs	r5, r1
 	mov	r1, sp
 	movs	r4, r0
@@ -1334,49 +1314,51 @@ DecompressDataVram:
 	lsls	r2, r2, #27
 	lsrs	r2, r2, #27
 	cmp	r2, #16
-	beq	.L205
+	beq	.L204
 	mov	r3, sp
-	ldrh	r0, [r3, #4]
-	cmp	r0, #0
-	beq	.L200
+	ldrh	r3, [r3, #4]
+	cmp	r3, #0
+	beq	.L199
+	mov	r3, sp
 	ldrh	r3, [r3]
-	ldr	r1, .L207+4
+	ldr	r1, .L206+4
 	lsls	r3, r3, #21
 	lsrs	r3, r3, #26
-	str	r3, [r1]
+	str	r3, [r1, #8]
 	movs	r3, #0
-	strb	r3, [r1, #9]
-	strb	r3, [r1, #8]
-	str	r3, [r1, #12]
+	str	r3, [r1, #4]
 	cmp	r2, #5
-	beq	.L206
-.L200:
+	beq	.L205
+.L199:
 	add	sp, sp, #8
 	@ sp needed
 	pop	{r4, r5}
 	pop	{r0}
 	bx	r0
-.L205:
+.L204:
 	movs	r1, r5
 	movs	r0, r4
 	bl	LZ77UnCompVram
-	b	.L200
-.L206:
+	b	.L199
+.L205:
 	movs	r3, r4
 	adds	r3, r3, #32
 	movs	r2, r4
-	str	r3, [r1, #4]
+	str	r3, [r1]
 	movs	r1, r4
+	ldr	r0, [sp]
+	lsrs	r0, r0, #11
 	movs	r3, r5
 	adds	r2, r2, #20
 	adds	r1, r1, #8
+	adds	r0, r5, r0
 	bl	DecodeMode5
-	b	.L200
-.L208:
-	.align	2
+	b	.L199
 .L207:
+	.align	2
+.L206:
 	.word	67108866
-	.word	.LANCHOR0
+	.word	.LANCHOR1
 	.size	DecompressDataVram, .-DecompressDataVram
 	.align	1
 	.p2align 2,,3
@@ -1391,7 +1373,7 @@ DecompressDataWram:
 	@ frame_needed = 0, uses_anonymous_args = 0
 	push	{r4, r5, lr}
 	sub	sp, sp, #8
-	ldr	r2, .L216
+	ldr	r2, .L215
 	movs	r5, r1
 	mov	r1, sp
 	movs	r4, r0
@@ -1401,49 +1383,51 @@ DecompressDataWram:
 	lsls	r2, r2, #27
 	lsrs	r2, r2, #27
 	cmp	r2, #16
-	beq	.L214
+	beq	.L213
 	mov	r3, sp
-	ldrh	r0, [r3, #4]
-	cmp	r0, #0
-	beq	.L209
+	ldrh	r3, [r3, #4]
+	cmp	r3, #0
+	beq	.L208
+	mov	r3, sp
 	ldrh	r3, [r3]
-	ldr	r1, .L216+4
+	ldr	r1, .L215+4
 	lsls	r3, r3, #21
 	lsrs	r3, r3, #26
-	str	r3, [r1]
+	str	r3, [r1, #8]
 	movs	r3, #0
-	strb	r3, [r1, #9]
-	strb	r3, [r1, #8]
-	str	r3, [r1, #12]
+	str	r3, [r1, #4]
 	cmp	r2, #5
-	beq	.L215
-.L209:
+	beq	.L214
+.L208:
 	add	sp, sp, #8
 	@ sp needed
 	pop	{r4, r5}
 	pop	{r0}
 	bx	r0
-.L214:
+.L213:
 	movs	r1, r5
 	movs	r0, r4
 	bl	LZ77UnCompWram
-	b	.L209
-.L215:
+	b	.L208
+.L214:
 	movs	r3, r4
 	adds	r3, r3, #32
 	movs	r2, r4
-	str	r3, [r1, #4]
+	str	r3, [r1]
 	movs	r1, r4
+	ldr	r0, [sp]
+	lsrs	r0, r0, #11
 	movs	r3, r5
 	adds	r2, r2, #20
 	adds	r1, r1, #8
+	adds	r0, r5, r0
 	bl	DecodeMode5
-	b	.L209
-.L217:
-	.align	2
+	b	.L208
 .L216:
+	.align	2
+.L215:
 	.word	67108866
-	.word	.LANCHOR0
+	.word	.LANCHOR1
 	.size	DecompressDataWram, .-DecompressDataWram
 	.align	1
 	.p2align 2,,3
@@ -1513,44 +1497,44 @@ SmolDecompressData:
 	@ Function supports interworking.
 	@ args = 0, pretend = 0, frame = 0
 	@ frame_needed = 0, uses_anonymous_args = 0
-	push	{r4, r5, r6, lr}
-	ldrh	r6, [r0, #4]
-	cmp	r6, #0
-	beq	.L220
+	push	{r4, r5, lr}
+	ldrh	r4, [r0, #4]
+	cmp	r4, #0
+	beq	.L219
+	movs	r3, #0
 	ldrh	r4, [r0]
-	ldr	r5, .L225
+	ldr	r5, .L224
 	lsls	r4, r4, #21
 	lsrs	r4, r4, #26
-	str	r4, [r5]
-	movs	r4, #0
-	strb	r4, [r5, #9]
-	strb	r4, [r5, #8]
-	str	r4, [r5, #12]
+	str	r4, [r5, #8]
 	ldrb	r4, [r0]
 	lsls	r4, r4, #27
+	str	r3, [r5, #4]
 	lsrs	r4, r4, #27
 	cmp	r4, #5
-	beq	.L224
-.L220:
+	beq	.L223
+.L219:
 	@ sp needed
-	pop	{r4, r5, r6}
+	pop	{r4, r5}
 	pop	{r0}
 	bx	r0
-.L224:
+.L223:
 	movs	r3, r1
-	movs	r0, r1
+	movs	r4, r1
+	ldr	r0, [r0]
 	adds	r3, r3, #24
-	adds	r0, r0, #12
-	str	r3, [r5, #4]
+	adds	r4, r4, #12
+	lsrs	r0, r0, #11
+	str	r3, [r5]
+	adds	r0, r2, r0
 	movs	r3, r2
-	movs	r2, r0
-	movs	r0, r6
+	movs	r2, r4
 	bl	DecodeMode5
-	b	.L220
-.L226:
-	.align	2
+	b	.L219
 .L225:
-	.word	.LANCHOR0
+	.align	2
+.L224:
+	.word	.LANCHOR1
 	.size	SmolDecompressData, .-SmolDecompressData
 	.align	1
 	.p2align 2,,3
@@ -1648,12 +1632,12 @@ LoadSpecialPokePic:
 	lsrs	r5, r5, #24
 	movs	r4, r0
 	cmp	r0, #201
-	beq	.L253
-.L231:
-	ldr	r3, .L256
+	beq	.L252
+.L230:
+	ldr	r3, .L255
 	mov	r8, r3
 	cmp	r5, #0
-	beq	.L232
+	beq	.L231
 	lsls	r5, r4, #6
 	adds	r3, r5, r4
 	lsls	r3, r3, #2
@@ -1661,28 +1645,28 @@ LoadSpecialPokePic:
 	ldr	r3, [r3, #108]
 	mov	r9, r3
 	cmp	r3, #0
-	beq	.L233
+	beq	.L232
 	lsls	r0, r4, #16
 	movs	r1, r7
 	lsrs	r0, r0, #16
 	bl	IsPersonalityFemale
 	cmp	r0, #0
-	bne	.L254
-.L233:
+	bne	.L253
+.L232:
 	adds	r5, r5, r4
 	lsls	r5, r5, #2
 	add	r5, r5, r8
 	ldr	r0, [r5, #88]
 	cmp	r0, #0
-	beq	.L235
-.L251:
+	beq	.L234
+.L250:
 	movs	r1, r6
 	bl	DecompressDataWram
-.L234:
+.L233:
 	movs	r3, #72
 	adds	r3, r3, #255
 	cmp	r4, r3
-	bne	.L230
+	bne	.L229
 	movs	r2, #0
 	movs	r1, r6
 	movs	r0, r7
@@ -1691,7 +1675,7 @@ LoadSpecialPokePic:
 	movs	r1, r6
 	movs	r0, r7
 	bl	DrawSpindaSpots
-.L230:
+.L229:
 	@ sp needed
 	pop	{r6, r7}
 	mov	r9, r7
@@ -1699,7 +1683,7 @@ LoadSpecialPokePic:
 	pop	{r4, r5, r6, r7}
 	pop	{r0}
 	bx	r0
-.L232:
+.L231:
 	lsls	r5, r4, #6
 	adds	r3, r5, r4
 	lsls	r3, r3, #2
@@ -1707,50 +1691,50 @@ LoadSpecialPokePic:
 	ldr	r3, [r3, #112]
 	mov	r9, r3
 	cmp	r3, #0
-	beq	.L236
+	beq	.L235
 	lsls	r0, r4, #16
 	movs	r1, r7
 	lsrs	r0, r0, #16
 	bl	IsPersonalityFemale
 	cmp	r0, #0
-	bne	.L255
-.L236:
+	bne	.L254
+.L235:
 	adds	r5, r5, r4
 	lsls	r5, r5, #2
 	add	r5, r5, r8
 	ldr	r0, [r5, #92]
 	cmp	r0, #0
-	beq	.L238
-.L252:
+	beq	.L237
+.L251:
 	movs	r1, r6
 	bl	DecompressDataWram
-	b	.L230
-.L253:
+	b	.L229
+.L252:
 	movs	r0, r7
 	bl	GetUnownSpeciesId
 	movs	r4, r0
-	b	.L231
-.L255:
-	movs	r1, r6
-	mov	r0, r9
-	bl	DecompressDataWram
 	b	.L230
 .L254:
 	movs	r1, r6
 	mov	r0, r9
 	bl	DecompressDataWram
-	b	.L234
-.L235:
+	b	.L229
+.L253:
+	movs	r1, r6
+	mov	r0, r9
+	bl	DecompressDataWram
+	b	.L233
+.L234:
 	mov	r3, r8
 	ldr	r0, [r3, #88]
-	b	.L251
-.L238:
+	b	.L250
+.L237:
 	mov	r3, r8
 	ldr	r0, [r3, #92]
-	b	.L252
-.L257:
-	.align	2
+	b	.L251
 .L256:
+	.align	2
+.L255:
 	.word	gSpeciesInfo
 	.size	LoadSpecialPokePic, .-LoadSpecialPokePic
 	.align	1
@@ -1791,7 +1775,7 @@ Unused_LZDecompressWramIndirect:
 	push	{r4, r5, lr}
 	ldr	r5, [r0]
 	sub	sp, sp, #8
-	ldr	r2, .L266
+	ldr	r2, .L265
 	movs	r4, r1
 	movs	r0, r5
 	mov	r1, sp
@@ -1801,49 +1785,51 @@ Unused_LZDecompressWramIndirect:
 	lsls	r2, r2, #27
 	lsrs	r2, r2, #27
 	cmp	r2, #16
-	beq	.L264
+	beq	.L263
 	mov	r3, sp
-	ldrh	r0, [r3, #4]
-	cmp	r0, #0
-	beq	.L259
+	ldrh	r3, [r3, #4]
+	cmp	r3, #0
+	beq	.L258
+	mov	r3, sp
 	ldrh	r3, [r3]
-	ldr	r1, .L266+4
+	ldr	r1, .L265+4
 	lsls	r3, r3, #21
 	lsrs	r3, r3, #26
-	str	r3, [r1]
+	str	r3, [r1, #8]
 	movs	r3, #0
-	strb	r3, [r1, #9]
-	strb	r3, [r1, #8]
-	str	r3, [r1, #12]
+	str	r3, [r1, #4]
 	cmp	r2, #5
-	beq	.L265
-.L259:
+	beq	.L264
+.L258:
 	add	sp, sp, #8
 	@ sp needed
 	pop	{r4, r5}
 	pop	{r0}
 	bx	r0
-.L264:
+.L263:
 	movs	r1, r4
 	movs	r0, r5
 	bl	LZ77UnCompWram
-	b	.L259
-.L265:
+	b	.L258
+.L264:
 	movs	r3, r5
 	adds	r3, r3, #32
 	movs	r2, r5
-	str	r3, [r1, #4]
+	str	r3, [r1]
 	movs	r1, r5
+	ldr	r0, [sp]
+	lsrs	r0, r0, #11
 	movs	r3, r4
 	adds	r2, r2, #20
 	adds	r1, r1, #8
+	adds	r0, r4, r0
 	bl	DecodeMode5
-	b	.L259
-.L267:
-	.align	2
+	b	.L258
 .L266:
+	.align	2
+.L265:
 	.word	67108866
-	.word	.LANCHOR0
+	.word	.LANCHOR1
 	.size	Unused_LZDecompressWramIndirect, .-Unused_LZDecompressWramIndirect
 	.align	1
 	.p2align 2,,3
@@ -1862,19 +1848,19 @@ GetDecompressedDataSize:
 	ldr	r0, [r0]
 	lsrs	r3, r3, #27
 	cmp	r3, #16
-	beq	.L271
+	beq	.L270
 	lsrs	r0, r0, #11
-.L268:
+.L267:
 	@ sp needed
 	bx	lr
-.L271:
+.L270:
 	lsrs	r0, r0, #8
-	b	.L268
+	b	.L267
 	.size	GetDecompressedDataSize, .-GetDecompressedDataSize
 	.section	.rodata.str1.4,"aMS",%progbits,1
 	.align	2
-.LC14:
-	.ascii	"src/decompress.c:903\000"
+.LC15:
+	.ascii	"src/decompress.c:886\000"
 	.text
 	.align	1
 	.p2align 2,,3
@@ -1896,10 +1882,10 @@ LoadCompressedSpriteSheetUsingHeap:
 	ldr	r0, [r2]
 	lsrs	r3, r3, #27
 	cmp	r3, #16
-	beq	.L275
+	beq	.L274
 	lsrs	r0, r0, #11
-.L274:
-	ldr	r1, .L276
+.L273:
+	ldr	r1, .L275
 	bl	AllocZeroed_
 	movs	r4, r0
 	ldr	r0, [r5]
@@ -1918,18 +1904,18 @@ LoadCompressedSpriteSheetUsingHeap:
 	pop	{r4, r5}
 	pop	{r1}
 	bx	r1
-.L275:
+.L274:
 	lsrs	r0, r0, #8
-	b	.L274
-.L277:
-	.align	2
+	b	.L273
 .L276:
-	.word	.LC14
+	.align	2
+.L275:
+	.word	.LC15
 	.size	LoadCompressedSpriteSheetUsingHeap, .-LoadCompressedSpriteSheetUsingHeap
 	.section	.rodata.str1.4
 	.align	2
-.LC16:
-	.ascii	"src/decompress.c:920\000"
+.LC17:
+	.ascii	"src/decompress.c:903\000"
 	.text
 	.align	1
 	.p2align 2,,3
@@ -1951,10 +1937,10 @@ LoadCompressedSpritePaletteUsingHeap:
 	ldr	r0, [r2]
 	lsrs	r3, r3, #27
 	cmp	r3, #16
-	beq	.L281
+	beq	.L280
 	lsrs	r0, r0, #11
-.L280:
-	ldr	r1, .L282
+.L279:
+	ldr	r1, .L281
 	bl	AllocZeroed_
 	movs	r4, r0
 	ldr	r0, [r5]
@@ -1974,16 +1960,44 @@ LoadCompressedSpritePaletteUsingHeap:
 	pop	{r4, r5}
 	pop	{r1}
 	bx	r1
-.L281:
+.L280:
 	lsrs	r0, r0, #8
-	b	.L280
-.L283:
-	.align	2
+	b	.L279
 .L282:
-	.word	.LC16
-	.size	LoadCompressedSpritePaletteUsingHeap, .-LoadCompressedSpritePaletteUsingHeap
-	.section	.rodata
 	.align	2
+.L281:
+	.word	.LC17
+	.size	LoadCompressedSpritePaletteUsingHeap, .-LoadCompressedSpritePaletteUsingHeap
+	.section	.bss,"aw",%nobits
+	.align	2
+	.set	.LANCHOR1,. + 0
+	.type	sBitStream, %object
+	.size	sBitStream, 4
+sBitStream:
+	.space	4
+	.type	sCurrBits, %object
+	.size	sCurrBits, 4
+sCurrBits:
+	.space	4
+	.type	sCurrState, %object
+	.size	sCurrState, 4
+sCurrState:
+	.space	4
+	.type	sCurrSymbol, %object
+	.size	sCurrSymbol, 4
+sCurrSymbol:
+	.space	4
+	.type	sWorkingYkTable_Sym, %object
+	.size	sWorkingYkTable_Sym, 256
+sWorkingYkTable_Sym:
+	.space	256
+	.type	sWorkingYkTable_Lo, %object
+	.size	sWorkingYkTable_Lo, 256
+sWorkingYkTable_Lo:
+	.space	256
+	.section	.iwram,"aw"
+	.align	2
+	.set	.LANCHOR0,. + 0
 	.type	sYkTemplate, %object
 	.size	sYkTemplate, 512
 sYkTemplate:
@@ -2115,46 +2129,12 @@ sYkTemplate:
 	.word	15616
 	.word	15872
 	.word	16128
-	.section	.bss,"aw",%nobits
-	.align	2
-	.type	sWorkingYkTable_Sym, %object
-	.size	sWorkingYkTable_Sym, 256
-sWorkingYkTable_Sym:
-	.space	256
-	.type	sWorkingYkTable_Lo, %object
-	.size	sWorkingYkTable_Lo, 256
-sWorkingYkTable_Lo:
-	.space	256
-	.section	.sbss,"aw",%nobits
-	.align	2
-	.set	.LANCHOR0,. + 0
-	.type	sCurrState, %object
-	.size	sCurrState, 4
-sCurrState:
-	.space	4
-	.type	sBitStream, %object
-	.size	sBitStream, 4
-sBitStream:
-	.space	4
-	.type	sPrevSymNibble, %object
-	.size	sPrevSymNibble, 1
-sPrevSymNibble:
-	.space	1
-	.type	sBitIndex, %object
-	.size	sBitIndex, 1
-sBitIndex:
-	.space	1
-	.space	2
-	.type	sCurrBits, %object
-	.size	sCurrBits, 4
-sCurrBits:
-	.space	4
 	.ident	"GCC: (devkitARM release 63) 13.2.0"
 	.text
 	.code 16
 	.align	1
-.L153:
-	bx	r8
+.L152:
+	bx	r4
 .text
 	.align	2, 0
 

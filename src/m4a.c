@@ -6,18 +6,18 @@ extern const u8 gCgb3Vol[];
 
 #define BSS_CODE __attribute__((section(".bss.code")))
 
-COMMON_DATA struct SoundInfo gSoundInfo = {0};
-COMMON_DATA struct PokemonCrySong gPokemonCrySongs[MAX_POKEMON_CRIES] = {0};
-COMMON_DATA struct MusicPlayerInfo gPokemonCryMusicPlayers[MAX_POKEMON_CRIES] = {0};
-COMMON_DATA struct MusicPlayerInfo gMPlayInfo_BGM = {0};
-COMMON_DATA MPlayFunc gMPlayJumpTable[36] = {0};
-COMMON_DATA struct CgbChannel gCgbChans[4] = {0};
-COMMON_DATA struct MusicPlayerInfo gMPlayInfo_SE1 = {0};
-COMMON_DATA struct MusicPlayerInfo gMPlayInfo_SE2 = {0};
-COMMON_DATA struct MusicPlayerTrack gPokemonCryTracks[MAX_POKEMON_CRIES * 2] = {0};
-COMMON_DATA struct PokemonCrySong gPokemonCrySong = {0};
-COMMON_DATA u8 gMPlayMemAccArea[0x10] = {0};
-COMMON_DATA struct MusicPlayerInfo gMPlayInfo_SE3 = {0};
+EWRAM_DATA struct SoundInfo gSoundInfo = {0};
+EWRAM_DATA struct PokemonCrySong gPokemonCrySongs[MAX_POKEMON_CRIES] = {0};
+EWRAM_DATA struct MusicPlayerInfo gPokemonCryMusicPlayers[MAX_POKEMON_CRIES] = {0};
+EWRAM_DATA struct MusicPlayerInfo gMPlayInfo_BGM = {0};
+EWRAM_DATA MPlayFunc gMPlayJumpTable[36] = {0};
+EWRAM_DATA struct CgbChannel gCgbChans[4] = {0};
+EWRAM_DATA struct MusicPlayerInfo gMPlayInfo_SE1 = {0};
+EWRAM_DATA struct MusicPlayerInfo gMPlayInfo_SE2 = {0};
+EWRAM_DATA struct MusicPlayerTrack gPokemonCryTracks[MAX_POKEMON_CRIES * 2] = {0};
+EWRAM_DATA struct PokemonCrySong gPokemonCrySong = {0};
+EWRAM_DATA u8 gMPlayMemAccArea[0x10] = {0};
+EWRAM_DATA struct MusicPlayerInfo gMPlayInfo_SE3 = {0};
 
 u32 MidiKeyToFreq(struct WaveData *wav, u8 key, u8 fineAdjust)
 {

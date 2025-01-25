@@ -17,7 +17,7 @@ struct Dma3Request
     u32 value;
 };
 
-static struct Dma3Request sDma3Requests[MAX_DMA_REQUESTS];
+EWRAM_DATA static struct Dma3Request sDma3Requests[MAX_DMA_REQUESTS];
 
 static vbool8 sDma3ManagerLocked;
 static u8 sDma3RequestCursor;
