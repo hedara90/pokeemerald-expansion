@@ -5,7 +5,6 @@
 #include "sprite.h"
 #include "test/test.h"
 
-/*
 TEST("Compression test: tileset smol")
 {
     static const u32 origFile[] = INCBIN_U32("test/compression/tilesetTest.4bpp");
@@ -15,7 +14,7 @@ TEST("Compression test: tileset smol")
     CycleCountStart();
     LZDecompressWram(compFile, compBuffer);
     u32 timeTaken = CycleCountEnd();
-    DebugPrintf("Time Tileset Smol: %u", timeTaken);
+    DebugPrintf("Time Tileset Smol: %u   size: %d", timeTaken, sizeof(compFile));
 
     u32 val1 = 0;
     u32 val2 = 0;
@@ -135,7 +134,7 @@ TEST("Compression test: complex battle sprite")
     CycleCountStart();
     LZDecompressWram(compFile, compBuffer);
     u32 timeTaken = CycleCountEnd();
-    DebugPrintf("Time Complex Sprite smol: %u", timeTaken);
+    DebugPrintf("Time Complex Sprite smol: %u    size: %d", timeTaken, sizeof(compFile));
 
     u32 val1 = 0;
     u32 val2 = 0;
@@ -245,7 +244,6 @@ TEST("Compression test: bubbles")
 
     Free(compBuffer);
 }
-*/
 
 TEST("Compression test: small mode 0")
 {

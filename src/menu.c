@@ -1944,12 +1944,12 @@ void task_free_buf_after_copying_tile_data_to_vram(u8 taskId)
 void *malloc_and_decompress(const void *src, u32 *size)
 {
     void *ptr;
-    union CompressionHeader header;
-    CpuCopy32(src, &header, 8);
+    u32 localSize = GetDecompressedDataSize(src);
 
-    *size = GetDecompressedDataSize(src);
+    if (size != NULL)
+        *size = localSize;
 
-    ptr = Alloc(*size);
+    ptr = Alloc(localSize);
     if (ptr)
         LZDecompressWram(src, ptr);
     return ptr;
