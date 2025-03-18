@@ -3266,34 +3266,12 @@ static const struct TrainerMon sParty_Bernie5[] = {
 static const struct TrainerMon sParty_Drew[] = {
     {
     .iv = TRAINER_PARTY_IVS(31, 31, 31, 31, 31, 31),
-    .lvl = 201,
-    .species = SPECIES_EXCADRILL,
-    .nature = NATURE_JOLLY,
-    .ev = TRAINER_PARTY_EVS_JOLLY(),
-    .ability = ABILITY_SAND_RUSH,
-    .heldItem = ITEM_LIFE_ORB,
-    .moves = {MOVE_EARTHQUAKE, MOVE_IRON_HEAD, MOVE_ROCK_SLIDE, MOVE_BRICK_BREAK}
-    },
-    {
-    .iv = TRAINER_PARTY_IVS(31, 31, 31, 31, 31, 31),
-    .lvl = 201,
-    .species = SPECIES_SANDY_SHOCKS,
+    .lvl = 10,
+    .species = SPECIES_CLEFFA,
     .nature = NATURE_TIMID,
     .ev = TRAINER_PARTY_EVS_TIMID(),
-    .ability = ABILITY_WATER_COMPACTION,
-    .heldItem = ITEM_AIR_BALLOON,
-    .moves = {MOVE_DISCHARGE, MOVE_EARTH_POWER, MOVE_FLASH_CANNON, MOVE_THUNDERBOLT}
+    .moves = {MOVE_CELEBRATE, MOVE_CELEBRATE, MOVE_CELEBRATE, MOVE_CELEBRATE}
     },
-    {
-    .iv = TRAINER_PARTY_IVS(31, 31, 31, 31, 31, 31),
-    .lvl = 201,
-    .species = SPECIES_SANDACONDA,
-    .nature = NATURE_JOLLY,
-    .ev = TRAINER_PARTY_EVS_JOLLY(),
-    .ability = ABILITY_SAND_SPIT,
-    .heldItem = ITEM_SANDACONDITE,
-    .moves = {MOVE_DOUBLE_EDGE, MOVE_QUICK_ATTACK, MOVE_HIGH_HORSEPOWER, MOVE_SCALE_SHOT}
-    }
 };
 
 static const struct TrainerMon sParty_Beau[] = {
@@ -12645,23 +12623,11 @@ static const struct TrainerMon sParty_Celia[] = {
 static const struct TrainerMon sParty_Branden[] = {
     {
     .iv = TRAINER_PARTY_IVS(31, 31, 31, 31, 31, 31),
-    .lvl = 201,
-    .species = SPECIES_ROTOM_MOW,
-    .nature = NATURE_TIMID,
-    .ev = TRAINER_PARTY_EVS_TIMID(),
-    .ability = ABILITY_LEVITATE,
-    .heldItem = ITEM_FOCUS_SASH,
-    .moves = {MOVE_DISCHARGE, MOVE_GIGA_DRAIN, MOVE_HEX, MOVE_CONFUSE_RAY}
-    },
-    {
-    .iv = TRAINER_PARTY_IVS(31, 31, 31, 31, 31, 31),
-    .lvl = 201,
-    .species = SPECIES_ARCANINE_HISUI,
+    .lvl = 10,
+    .species = SPECIES_WYNAUT,
     .nature = NATURE_JOLLY,
     .ev = TRAINER_PARTY_EVS_JOLLY(),
-    .ability = ABILITY_INTIMIDATE,
-    .heldItem = ITEM_AIR_BALLOON,
-    .moves = {MOVE_FLARE_BLITZ, MOVE_HEAD_SMASH, MOVE_HEADLONG_RUSH, MOVE_EXTREME_SPEED}
+    .moves = {MOVE_CELEBRATE, MOVE_CELEBRATE, MOVE_CELEBRATE, MOVE_CELEBRATE}
     },
     {
     .iv = TRAINER_PARTY_IVS(31, 31, 31, 31, 31, 31),
