@@ -33,7 +33,14 @@ enum Recipes TryCraftItem(u32 numIngredients, u16 *items)
         }
         else
         {
-            iCount[numDifferentIngredients].count++;
+            for (u32 j = 0; j < numDifferentIngredients; j++)
+            {
+                if (iCount[j].item == currItem)
+                {
+                    iCount[j].count++;
+                    break;
+                }
+            }
         }
     }
 
@@ -54,21 +61,25 @@ enum Recipes TryCraftItem(u32 numIngredients, u16 *items)
         if (numIngredients != sCraftingRecipes[currRecipe].ingredientCount
          || numDifferentIngredients != sCraftingRecipes[currRecipe].numDifferentIngredients)
             continue;
+
         struct IngredientCount *recipeIngredients = Alloc(numIngredients*sizeof(struct IngredientCount));
         for (u32 i = 0; i < sCraftingRecipes[currRecipe].numDifferentIngredients; i++)
         {
             recipeIngredients[i].item = sCraftingRecipes[currRecipe].ingredients[i].item;
             recipeIngredients[i].count = sCraftingRecipes[currRecipe].ingredients[i].count;
         }
+
         for (u32 i = 0; i < numIngredients; i++)
         {
             for (u32 j = 0; j < numDifferentIngredients; j++)
             {
                 if (iCount[j].item != recipeIngredients[i].item)
                     continue;
-                recipeIngredients[i].count--;
+                if (recipeIngredients[i].count == iCount[j].count)
+                    recipeIngredients[i].count = 0;
             }
         }
+
         bool32 recipeMatches = TRUE;
         for (u32 i = 0; i < numDifferentIngredients; i++)
         {
@@ -78,6 +89,7 @@ enum Recipes TryCraftItem(u32 numIngredients, u16 *items)
                 break;
             }
         }
+
         Free(recipeIngredients);
         if (recipeMatches)
         {
