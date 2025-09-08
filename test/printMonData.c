@@ -6,7 +6,8 @@
 
 TEST("Print mons")
 {
-    u32 endVal = NUM_SPECIES;
+    //u32 endVal = NUM_SPECIES;
+    u32 endVal = 2;
     for (u32 i = 1; i < endVal; i++)
     {
         const struct SpeciesInfo *currSpecies = &gSpeciesInfo[i];
@@ -33,7 +34,7 @@ TEST("Print mons")
         DebugPrintf("        \"defense\": %u,", currSpecies->baseDefense);
         DebugPrintf("        \"spAttack\": %u,", currSpecies->baseSpAttack);
         DebugPrintf("        \"spDefense\": %u,", currSpecies->baseSpDefense);
-        DebugPrintf("        \"speed\": %u,", currSpecies->baseSpeed);
+        DebugPrintf("        \"speed\": %u", currSpecies->baseSpeed);
         DebugPrintf("    },");
 
         //  Print abilities
@@ -114,19 +115,19 @@ TEST("Print mons")
             DebugPrintf("    ],");
         }
 
+        //  Print forms
+        if (currSpecies->isMegaEvolution)
+            DebugPrintf("    \"form\": \"mega\",");
+        else if (currSpecies->isGigantamax)
+            DebugPrintf("    \"form\": \"gigantamax\",");
+
         //  Various data
         DebugPrintf("    \"catchRate\": %u,", currSpecies->catchRate);
         DebugPrintf("    \"expYield\": %u,", currSpecies->expYield);
         DebugPrintf("    \"eggCycles\": %u,", currSpecies->eggCycles);
         DebugPrintf("    \"monCategory\": \"%S\",", currSpecies->categoryName);
         DebugPrintf("    \"natDexNum\": %u,", currSpecies->natDexNum);
-        DebugPrintf("    \"internalId\": %u,", i);
-
-        //  Print forms
-        if (currSpecies->isMegaEvolution)
-            DebugPrintf("    \"form\": \"mega\",");
-        else if (currSpecies->isGigantamax)
-            DebugPrintf("    \"form\": \"gigantamax\",");
+        DebugPrintf("    \"internalId\": %u", i);
 
         DebugPrintf("}");
     }
