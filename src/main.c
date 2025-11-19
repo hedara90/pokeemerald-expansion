@@ -42,6 +42,9 @@ const u8 gGameLanguage = GAME_LANGUAGE; // English
 
 const char BuildDateTime[] = "2005 02 21 11:10";
 
+EWRAM_DATA static u32 sTestThing = 0;
+__attribute__((section(".persistent"))) u32 gIsMyBoy = 0;
+
 const IntrFunc gIntrTableTemplate[] =
 {
     VCountIntr, // V-count interrupt
@@ -128,6 +131,20 @@ void AgbMain(void)
 #endif
 #endif
     gAgbMainLoop_sp = __builtin_frame_address(0);
+
+    //  Do init check
+    if (gIsMyBoy == 1)
+    {
+        gIsMyBoy = 0;
+    }
+    else
+    {
+        gIsMyBoy = 1;
+        //((void (*)(void *))sTestThing)(0);
+        sTestThing = 23478 / sTestThing;
+    }
+    gIsMyBoy = !gIsMyBoy;
+
     AgbMainLoop();
 }
 

@@ -264,6 +264,7 @@ static const u8 gText_BatteryRunDry[] = _("The internal battery has run dry.\nTh
 static const u8 gText_MainMenuNewGame[] = _("NEW GAME");
 static const u8 gText_MainMenuContinue[] = _("CONTINUE");
 static const u8 gText_MainMenuOption[] = _("OPTION");
+static const u8 gText_IsMyBoy[] = _("Is MyBoy");
 static const u8 gText_MainMenuMysteryGift[] = _("MYSTERY GIFT");
 static const u8 gText_MainMenuMysteryGift2[] = _("MYSTERY GIFT");
 static const u8 gText_MainMenuMysteryEvents[] = _("MYSTERY EVENTS");
@@ -804,7 +805,10 @@ static void Task_DisplayMainMenu(u8 taskId)
                 FillWindowPixelBuffer(0, PIXEL_FILL(0xA));
                 FillWindowPixelBuffer(1, PIXEL_FILL(0xA));
                 AddTextPrinterParameterized3(0, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuNewGame);
-                AddTextPrinterParameterized3(1, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
+                if (gIsMyBoy)
+                    AddTextPrinterParameterized3(1, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_IsMyBoy);
+                else
+                    AddTextPrinterParameterized3(1, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
                 PutWindowTilemap(0);
                 PutWindowTilemap(1);
                 CopyWindowToVram(0, COPYWIN_GFX);
@@ -817,7 +821,10 @@ static void Task_DisplayMainMenu(u8 taskId)
                 FillWindowPixelBuffer(3, PIXEL_FILL(0xA));
                 FillWindowPixelBuffer(4, PIXEL_FILL(0xA));
                 AddTextPrinterParameterized3(2, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuContinue);
-                AddTextPrinterParameterized3(3, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuNewGame);
+                if (gIsMyBoy)
+                    AddTextPrinterParameterized3(3, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_IsMyBoy);
+                else
+                    AddTextPrinterParameterized3(3, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuNewGame);
                 AddTextPrinterParameterized3(4, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
                 MainMenu_FormatSavegameText();
                 PutWindowTilemap(2);
