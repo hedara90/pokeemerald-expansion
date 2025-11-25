@@ -45,8 +45,10 @@ static u32 GetGlyphWidth_Narrower(u16, bool32);
 static u32 GetGlyphWidth_SmallNarrower(u16, bool32);
 static u32 GetGlyphWidth_ShortNarrow(u16, bool32);
 
+static u32 GetUnusedTextPrinter(void);
+
 static EWRAM_DATA struct TextPrinter sTempTextPrinter = {0};
-static EWRAM_DATA struct TextPrinter sTextPrinters[WINDOWS_MAX] = {0};
+static EWRAM_DATA struct TextPrinter sTextPrinters[NUM_TEXT_PRINTERS] = {0};
 
 static u16 sFontHalfRowLookupTable[0x51];
 static u16 sLastTextBgColor;
@@ -303,8 +305,11 @@ static void SetFontsPointer(const struct FontInfo *fonts)
 void DeactivateAllTextPrinters(void)
 {
     int printer;
-    for (printer = 0; printer < WINDOWS_MAX; ++printer)
+    for (printer = 0; printer < NUM_TEXT_PRINTERS; ++printer)
+    {
         sTextPrinters[printer].active = FALSE;
+        sTextPrinters[printer].isInUse = FALSE;
+    }
 }
 
 u16 AddTextPrinterParameterized(u8 windowId, u8 fontId, const u8 *str, u8 x, u8 y, u8 speed, void (*callback)(struct TextPrinterTemplate *, u16))
@@ -353,7 +358,12 @@ bool32 AddTextPrinter(struct TextPrinterTemplate *printerTemplate, u8 speed, voi
     if (speed != TEXT_SKIP_DRAW && speed != 0)
     {
         --sTempTextPrinter.textSpeed;
-        sTextPrinters[printerTemplate->windowId] = sTempTextPrinter;
+        sTempTextPrinter.isInUse = TRUE;
+        u32 printerId = GetUnusedTextPrinter();
+        if (printerId != NUM_TEXT_PRINTERS + 1)
+            sTextPrinters[GetUnusedTextPrinter()] = sTempTextPrinter;
+        else
+            return FALSE;
     }
     else
     {
@@ -405,6 +415,7 @@ void RunTextPrinters(void)
                         break;
                     case RENDER_FINISH:
                         sTextPrinters[i].active = FALSE;
+                        sTextPrinters[i].isInUse = FALSE;
                         return;
                     }
                 }
@@ -1274,6 +1285,7 @@ static u16 RenderText(struct TextPrinter *textPrinter)
                 textPrinter->printerTemplate.currentX += gCurGlyph.width + textPrinter->printerTemplate.letterSpacing;
                 return RENDER_PRINT;
             case EOS:
+                textPrinter->isInUse = FALSE;
                 return RENDER_FINISH;
             }
 
@@ -1389,6 +1401,7 @@ static u16 RenderText(struct TextPrinter *textPrinter)
         return RENDER_UPDATE;
     }
 
+    textPrinter->isInUse = FALSE;
     return RENDER_FINISH;
 }
 
@@ -2301,3 +2314,10 @@ u8 *WrapFontIdToFit(u8 *start, u8 *end, u32 fontId, u32 width)
     }
 }
 
+static u32 GetUnusedTextPrinter(void)
+{
+    for (u32 i = 0; i < NUM_TEXT_PRINTERS; i++)
+        if (!sTextPrinters[i].isInUse)
+            return i;
+    return NUM_TEXT_PRINTERS + 1;
+}
