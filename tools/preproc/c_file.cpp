@@ -396,11 +396,11 @@ void CFile::TryConvertIncbin()
 
 void CFile::TryReplaceEnumCount()
 {
-    std::string enumCount = "countofenum";
+    std::string sizeofenumString = "sizeofenum";
 
-    if (CheckIdentifier(enumCount))
+    if (CheckIdentifier(sizeofenumString))
     {
-        long int currPos = m_pos + 12;
+        long int currPos = m_pos + sizeofenumString.length() + 1;
         int nameLength = 0;
         while (m_buffer[currPos + nameLength++] != ')');
         char str[nameLength];
