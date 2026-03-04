@@ -575,9 +575,7 @@ static void SetStructPtr(u8 taskId, void *ptr)
 static void PrintDigitChars(struct PokemonSpriteVisualizer *data)
 {
     s32 i;
-    u16 species = data->modifyArrows.currValue;
-    if (!IsSpeciesEnabled(species))
-        species = 0;
+    u16 species = IsSpeciesEnable(data->modifyArrows.currValue) ? data->modifyArrows.currValue : 0;
 
     u8 text[MODIFY_DIGITS_MAX + POKEMON_NAME_LENGTH + 8];
 
@@ -1789,7 +1787,6 @@ static void HandleInput_PokemonSpriteVisualizer(u8 taskId)
         {
             if (TryMoveDigit(&data->modifyArrows, TRUE))
             {
-                u32 val = 0;
                 data->isFemale = FALSE;
                 PrintDigitChars(data);
                 UpdateBattlerValue(data);
