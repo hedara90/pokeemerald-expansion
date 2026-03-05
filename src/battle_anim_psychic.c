@@ -835,8 +835,7 @@ static void AnimTask_Teleport_Step(u8 taskId)
 
 void AnimTask_ImprisonOrbs(u8 taskId)
 {
-    if (!(TryLoadGfx(gImprisonOrbSpriteTemplate.tileTag)
-       && TryLoadPal(gImprisonOrbSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gImprisonOrbSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -954,8 +953,7 @@ static void AnimRedX(struct Sprite *sprite)
 
 void AnimTask_SkillSwap(u8 taskId)
 {
-    if (!(TryLoadGfx(gSkillSwapOrbSpriteTemplate.tileTag)
-       && TryLoadPal(gSkillSwapOrbSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gSkillSwapOrbSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -1010,8 +1008,7 @@ void AnimTask_SkillSwap(u8 taskId)
 // arg 0: move target
 void AnimTask_HeartSwap(u8 taskId)
 {
-    if (!(TryLoadGfx(gHeartSwapOrbSpriteTemplate.tileTag)
-       && TryLoadPal(gHeartSwapOrbSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gHeartSwapOrbSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;

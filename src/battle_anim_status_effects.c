@@ -355,8 +355,7 @@ static void AnimFlashingCircleImpact_Step(struct Sprite *sprite)
 
 void AnimTask_FrozenIceCubeAttacker(u8 taskId)
 {
-    if (!(TryLoadGfx(sFrozenIceCubeSpriteTemplate.tileTag)
-       && TryLoadPal(sFrozenIceCubeSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&sFrozenIceCubeSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -380,8 +379,7 @@ void AnimTask_FrozenIceCubeAttacker(u8 taskId)
 
 void AnimTask_CentredFrozenIceCube(u8 taskId)
 {
-    if (!(TryLoadGfx(sFrozenIceCubeSpriteTemplate.tileTag)
-       && TryLoadPal(sFrozenIceCubeSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&sFrozenIceCubeSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -418,8 +416,7 @@ void AnimTask_CentredFrozenIceCube(u8 taskId)
 
 void AnimTask_FrozenIceCube(u8 taskId)
 {
-    if (!(TryLoadGfx(sFrozenIceCubeSpriteTemplate.tileTag)
-       && TryLoadPal(sFrozenIceCubeSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&sFrozenIceCubeSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;

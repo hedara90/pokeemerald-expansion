@@ -1419,8 +1419,7 @@ static void MovePoisonGasCloud(struct Sprite *sprite)
 
 void AnimTask_Hail(u8 taskId)
 {
-    if (!(TryLoadGfx(gHailParticleSpriteTemplate.tileTag)
-       && TryLoadPal(gHailParticleSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gHailParticleSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -1551,8 +1550,7 @@ static bool8 GenerateHailParticle(u8 hailStructId, u8 affineAnimNum, u8 taskId, 
 
 static void AnimHailBegin(struct Sprite *sprite)
 {
-    if (!(TryLoadGfx(gIceCrystalHitLargeSpriteTemplate.tileTag)
-       && TryLoadPal(gIceCrystalHitLargeSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gIceCrystalHitLargeSpriteTemplate))
     {
         DestroyAnimSprite(sprite);
         return;
@@ -1725,8 +1723,7 @@ const struct SpriteTemplate gSnowFlakesSpriteTemplate =
 
 void AnimTask_CreateSnowflakes(u8 taskId)
 {
-    if (!(TryLoadGfx(gSnowFlakesSpriteTemplate.tileTag)
-       && TryLoadPal(gSnowFlakesSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gSnowFlakesSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;

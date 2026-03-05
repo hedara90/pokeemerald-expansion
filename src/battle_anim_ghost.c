@@ -830,8 +830,7 @@ void AnimTask_DestinyBondWhiteShadow(u8 taskId)
     if (gAnimMoveIndex == MOVE_DARK_VOID
      || gAnimMoveIndex == MOVE_POLTERGEIST)
     {
-        if (!(TryLoadGfx(gDarkVoidBlackHoleTemplate.tileTag)
-           && TryLoadPal(gDarkVoidBlackHoleTemplate.paletteTag)))
+        if (!TryLoadSpriteAssets(&gDarkVoidBlackHoleTemplate))
         {
             DestroyAnimVisualTask(taskId);
             return;
@@ -839,8 +838,7 @@ void AnimTask_DestinyBondWhiteShadow(u8 taskId)
     }
     else
     {
-        if (!(TryLoadGfx(gDestinyBondWhiteShadowSpriteTemplate.tileTag)
-           && TryLoadPal(gDestinyBondWhiteShadowSpriteTemplate.paletteTag)))
+        if (!TryLoadSpriteAssets(&gDestinyBondWhiteShadowSpriteTemplate))
         {
             DestroyAnimVisualTask(taskId);
             return;
@@ -1236,8 +1234,7 @@ static void AnimGhostStatusSprite_Step(struct Sprite *sprite)
 
 void AnimTask_GrudgeFlames(u8 taskId)
 {
-    if (!(TryLoadGfx(gGrudgeFlameSpriteTemplate.tileTag)
-       && TryLoadPal(gGrudgeFlameSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gGrudgeFlameSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -1409,8 +1406,7 @@ static void AnimMonMoveCircular_Step(struct Sprite *sprite)
 
 void AnimTask_PoltergeistItem(u8 taskId)
 {
-    if (!(TryLoadGfx(gPoltergeistEffectTemplate.tileTag)
-       && TryLoadPal(gPoltergeistEffectTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gPoltergeistEffectTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -1454,8 +1450,7 @@ static void AnimPoltergeistItem(struct Sprite *sprite)
 //pulverizing pancake - destiny bond shadow from attacker to target
 void AnimTask_PulverizingPancakeWhiteShadow(u8 taskId)
 {
-    if (!(TryLoadGfx(gDestinyBondWhiteShadowSpriteTemplate.tileTag)
-       && TryLoadPal(gDestinyBondWhiteShadowSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gDestinyBondWhiteShadowSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;

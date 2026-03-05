@@ -937,8 +937,7 @@ void AnimTask_DrillPeckHitSplats(u8 taskId)
 {
     if (!(gTasks[taskId].data[0] % 32))
     {
-        if (!(TryLoadGfx(gFlashingHitSplatSpriteTemplate.tileTag)
-           && TryLoadPal(gFlashingHitSplatSpriteTemplate.paletteTag)))
+        if (!TryLoadSpriteAssets(&gFlashingHitSplatSpriteTemplate))
         {
             DestroyAnimVisualTask(taskId);
             return;

@@ -487,8 +487,7 @@ void AnimBasicFistOrFoot(struct Sprite *sprite)
 
 static void AnimFistOrFootRandomPos(struct Sprite *sprite)
 {
-    if (!(TryLoadGfx(gBasicHitSplatSpriteTemplate.tileTag)
-       && TryLoadPal(gBasicHitSplatSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gBasicHitSplatSpriteTemplate))
     {
         DestroyAnimSprite(sprite);
         return;

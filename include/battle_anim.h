@@ -101,6 +101,7 @@ bool32 IsGfxLoaded(u32 tag);
 bool32 IsPalLoaded(u32 tag);
 bool32 TryLoadGfx(u32 tag);
 bool32 TryLoadPal(u32 tag);
+bool32 TryLoadSpriteAssets(const struct SpriteTemplate *template);
 bool32 StorePalTag(u32 tag);
 bool32 StoreGfxTag(u32 tag);
 

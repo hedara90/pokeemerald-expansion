@@ -3147,8 +3147,7 @@ void AnimTask_CreateSmallSolarBeamOrbs(u8 taskId)
 {
     if (--gTasks[taskId].data[0] == -1)
     {
-        if (!(TryLoadGfx(gSolarBeamSmallOrbSpriteTemplate.tileTag)
-           && TryLoadPal(gSolarBeamSmallOrbSpriteTemplate.paletteTag)))
+        if (!TryLoadSpriteAssets(&gSolarBeamSmallOrbSpriteTemplate))
         {
             DestroyAnimVisualTask(taskId);
             return;
@@ -4554,8 +4553,7 @@ void AnimTask_LeafBlade(u8 taskId)
 {
     struct Task *task = &gTasks[taskId];
 
-    if (!(TryLoadGfx(gLeafBladeSpriteTemplate.tileTag)
-       && TryLoadPal(gLeafBladeSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gLeafBladeSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -7388,8 +7386,7 @@ void AnimTask_CreateSmallSteelBeamOrbs(u8 taskId)
 {
     if (--gTasks[taskId].data[0] == -1)
     {
-        if (!(TryLoadGfx(gSteelBeamSmallOrbSpriteTemplate.tileTag)
-           && TryLoadPal(gSteelBeamSmallOrbSpriteTemplate.paletteTag)))
+        if (!TryLoadSpriteAssets(&gSteelBeamSmallOrbSpriteTemplate))
         {
             DestroyAnimVisualTask(taskId);
             return;

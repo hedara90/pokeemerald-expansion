@@ -594,6 +594,11 @@ bool32 TryLoadPal(u32 tag)
     }
 }
 
+bool32 TryLoadSpriteAssets(const struct SpriteTemplate *template)
+{
+    return TryLoadPal(template->paletteTag) && TryLoadGfx(template->tileTag);
+}
+
 static void WaitAnimFrameCount(void)
 {
     if (sAnimFramesToWait <= 0)
@@ -858,8 +863,7 @@ static void Cmd_createspriteontargets_onpos(void)
     argsCount = sBattleAnimScriptPtr[0];
     sBattleAnimScriptPtr++;
 
-    if (!(TryLoadGfx(template->tileTag)
-       && TryLoadPal(template->paletteTag)))
+    if (!TryLoadSpriteAssets(template))
     {
         sBattleAnimScriptPtr += 2 * argsCount;
         return;
@@ -889,8 +893,7 @@ static void Cmd_createspriteontargets(void)
     argsCount = sBattleAnimScriptPtr[0];
     sBattleAnimScriptPtr++;
 
-    if (!(TryLoadGfx(template->tileTag)
-       && TryLoadPal(template->paletteTag)))
+    if (!TryLoadSpriteAssets(template))
     {
         sBattleAnimScriptPtr += 2 * argsCount;
         return;
@@ -2459,8 +2462,7 @@ static void Cmd_createdragondartsprite(void)
     template.affineAnims = gDummySpriteAffineAnimTable;
     template.callback = AnimShadowBall;
 
-    if (!(TryLoadGfx(template.tileTag)
-       && TryLoadPal(template.paletteTag)))
+    if (!TryLoadSpriteAssets(&template))
         return;
 
     if (CreateSpriteAndAnimate(&template,

@@ -818,8 +818,7 @@ void AnimElectricity(struct Sprite *sprite)
 // The vertical falling thunder bolt used in Thunder Wave/Shock/Bolt
 void AnimTask_ElectricBolt(u8 taskId)
 {
-    if (!(TryLoadGfx(gElectricBoltSegmentSpriteTemplate.tileTag)
-       && TryLoadPal(gElectricBoltSegmentSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gElectricBoltSegmentSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -955,8 +954,7 @@ void AnimTask_ElectricChargingParticles(u8 taskId)
     else
         template = &gElectricChargingParticlesSpriteTemplate;
 
-    if (!(TryLoadGfx(template->tileTag)
-       && TryLoadPal(template->paletteTag)))
+    if (!TryLoadSpriteAssets(template))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -1202,8 +1200,7 @@ void AnimTask_VoltTackleBolt(u8 taskId)
             template = &gVoltTackleBoltSpriteTemplate;
         }
 
-        if (!(TryLoadGfx(template->tileTag)
-           && TryLoadPal(template->paletteTag)))
+        if (!TryLoadSpriteAssets(template))
         {
             DestroyAnimVisualTask(taskId);
             return;
@@ -1361,8 +1358,7 @@ void AnimTask_ShockWaveProgressingBolt(u8 taskId)
     switch (task->data[0])
     {
     case 0:
-        if (!(TryLoadGfx(gVoltTackleBoltSpriteTemplate.tileTag)
-           && TryLoadPal(gVoltTackleBoltSpriteTemplate.paletteTag)))
+        if (!TryLoadSpriteAssets(&gVoltTackleBoltSpriteTemplate))
         {
             DestroyAnimVisualTask(taskId);
             return;
@@ -1495,8 +1491,7 @@ void AnimTask_ShockWaveLightning(u8 taskId)
     switch (task->data[0])
     {
     case 0:
-        if (!(TryLoadGfx(gLightningSpriteTemplate.tileTag)
-           && TryLoadPal(gLightningSpriteTemplate.paletteTag)))
+        if (!TryLoadSpriteAssets(&gLightningSpriteTemplate))
         {
             DestroyAnimVisualTask(taskId);
             return;
@@ -1560,8 +1555,7 @@ static void AnimShockWaveLightning(struct Sprite *sprite)
 // arg 2: duration
 void AnimTask_CreateIons(u8 taskId)
 {
-    if (!(TryLoadGfx(gIonSpriteTemplate.tileTag)
-       && TryLoadPal(gIonSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gIonSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;

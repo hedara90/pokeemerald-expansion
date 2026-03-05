@@ -1580,8 +1580,7 @@ static void AirCutterProjectileStep1(u8 taskId)
 
 void AnimTask_AirCutterProjectile(u8 taskId)
 {
-    if (!(TryLoadGfx(gAirWaveProjectileSpriteTemplate.tileTag)
-       && TryLoadPal(gAirWaveProjectileSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gAirWaveProjectileSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -2872,8 +2871,7 @@ static void AnimTask_ExtremeSpeedMonReappear_Step(u8 taskId)
 
 void AnimTask_SpeedDust(u8 taskId)
 {
-    if (!(TryLoadGfx(gSpeedDustSpriteTemplate.tileTag)
-       && TryLoadPal(gSpeedDustSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gSpeedDustSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;

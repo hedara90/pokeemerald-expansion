@@ -7684,8 +7684,11 @@ void AnimTask_CreateBestowItem(u8 taskId)
 //No args.
 void AnimTask_PurpleFlamesOnTarget(u8 taskId)
 {
-    TryLoadGfx(gGrudgeFlameSpriteTemplate.tileTag);
-    TryLoadPal(gGrudgeFlameSpriteTemplate.paletteTag);
+    if (!TryLoadSpriteAssets(&gGrudgeFlameSpriteTemplate))
+    {
+        DestroyTask(taskId);
+        return;
+    }
 
     struct Task *task = &gTasks[taskId];
 

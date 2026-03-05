@@ -622,8 +622,7 @@ static void AnimKnockOffAquaTailStep(struct Sprite *sprite)
 
 void AnimTask_CreateRaindrops(u8 taskId)
 {
-    if (!(TryLoadGfx(gRainDropSpriteTemplate.tileTag)
-       && TryLoadPal(gRainDropSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gRainDropSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -1238,8 +1237,7 @@ static void AnimSmallDriftingBubbles_Step(struct Sprite *sprite)
 
 void AnimTask_WaterSpoutLaunch(u8 taskId)
 {
-    if (!(TryLoadGfx(gSmallWaterOrbSpriteTemplate.tileTag)
-       && TryLoadPal(gSmallWaterOrbSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gSmallWaterOrbSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -1431,10 +1429,8 @@ static void AnimSmallWaterOrb(struct Sprite *sprite)
 
 void AnimTask_BrineRain(u8 taskId)
 {
-    if (!(TryLoadGfx(gSmallWaterOrbSpriteTemplate.tileTag)
-       && TryLoadPal(gSmallWaterOrbSpriteTemplate.paletteTag)
-       && TryLoadGfx(gWaterHitSplatSpriteTemplate.tileTag)
-       && TryLoadPal(gWaterHitSplatSpriteTemplate.paletteTag)))
+    if (!(TryLoadSpriteAssets(&gSmallWaterOrbSpriteTemplate)
+       && TryLoadSpriteAssets(&gWaterHitSplatSpriteTemplate)))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -1497,10 +1493,8 @@ static void AnimTask_BrineRain_Step(u8 taskId)
 
 void AnimTask_WaterSpoutRain(u8 taskId)
 {
-    if (!(TryLoadGfx(gSmallWaterOrbSpriteTemplate.tileTag)
-       && TryLoadPal(gSmallWaterOrbSpriteTemplate.paletteTag)
-       && TryLoadGfx(gWaterHitSplatSpriteTemplate.tileTag)
-       && TryLoadPal(gWaterHitSplatSpriteTemplate.paletteTag)))
+    if (!(TryLoadSpriteAssets(&gSmallWaterOrbSpriteTemplate)
+       && TryLoadSpriteAssets(&gWaterHitSplatSpriteTemplate)))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -1640,8 +1634,7 @@ static void AnimWaterSpoutRainHit(struct Sprite *sprite)
 
 void AnimTask_WaterSport(u8 taskId)
 {
-    if (!(TryLoadGfx(gSmallWaterOrbSpriteTemplate.tileTag)
-       && TryLoadPal(gSmallWaterOrbSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gSmallWaterOrbSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -1821,8 +1814,7 @@ static void AnimWaterPulseRingBubble(struct Sprite *sprite)
 
 void AnimWaterPulseRing(struct Sprite *sprite)
 {
-    if (!(TryLoadGfx(gWaterPulseRingBubbleSpriteTemplate.tileTag)
-       && TryLoadPal(gWaterPulseRingBubbleSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gWaterPulseRingBubbleSpriteTemplate))
     {
         DestroyAnimSprite(sprite);
         return;

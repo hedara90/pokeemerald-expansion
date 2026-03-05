@@ -1965,8 +1965,7 @@ static void RapinSpinMonElevation_Step(u8 taskId)
 
 void AnimTask_TormentAttacker(u8 taskId)
 {
-    if (!(TryLoadGfx(gThoughtBubbleSpriteTemplate.tileTag)
-       && TryLoadPal(gThoughtBubbleSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gThoughtBubbleSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -3967,8 +3966,7 @@ static void AnimTask_SquishAndSweatDroplets_Step(u8 taskId)
 
 static void CreateSweatDroplets(u8 taskId, bool8 lowerDroplets)
 {
-    if (!(TryLoadGfx(gFacadeSweatDropSpriteTemplate.tileTag)
-       && TryLoadPal(gFacadeSweatDropSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gFacadeSweatDropSpriteTemplate))
         return;
 
     s8 xOffset, yOffset;
@@ -4156,8 +4154,7 @@ static void AnimRoarNoiseLine_Step(struct Sprite *sprite)
 // arg 0: unused
 void AnimTask_GlareEyeDots(u8 taskId)
 {
-    if (!(TryLoadGfx(gGlareEyeDotSpriteTemplate.tileTag)
-       && TryLoadPal(gGlareEyeDotSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gGlareEyeDotSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;
@@ -4332,8 +4329,7 @@ void AnimAssistPawprint(struct Sprite *sprite)
 // No args.
 void AnimTask_BarrageBall(u8 taskId)
 {
-    if (!(TryLoadGfx(gBarrageBallSpriteTemplate.tileTag)
-       && TryLoadPal(gBarrageBallSpriteTemplate.paletteTag)))
+    if (!TryLoadSpriteAssets(&gBarrageBallSpriteTemplate))
     {
         DestroyAnimVisualTask(taskId);
         return;

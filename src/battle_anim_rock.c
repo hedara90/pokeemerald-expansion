@@ -852,8 +852,7 @@ static void CreateRolloutDirtSprite(struct Task *task)
         return;
     }
 
-    if (!(TryLoadGfx(spriteTemplate->tileTag)
-       && TryLoadPal(spriteTemplate->paletteTag)))
+    if (!TryLoadSpriteAssets(spriteTemplate))
     {
         //  Unsure how to exit this task
         return;
