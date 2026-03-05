@@ -668,9 +668,8 @@ static void Cmd_unloadspritepal(void)
     }
 }
 
-static void Cmd_unloadallspritepals(void)
+static void UnloadAllSpritePalettes(void)
 {
-    sBattleAnimScriptPtr++;
     for (u32 i = 0; i < ANIM_SPRITE_PAL_COUNT; i++)
     {
         if (sAnimSpritePalTags[i] != 0xFFFF)
@@ -680,6 +679,12 @@ static void Cmd_unloadallspritepals(void)
             sAnimSpritePalTags[i] = 0xFFFF;
         }
     }
+}
+
+static void Cmd_unloadallspritepals(void)
+{
+    sBattleAnimScriptPtr++;
+    UnloadAllSpritePalettes();
 }
 
 static u8 GetBattleAnimMoveTargets(u8 battlerArgIndex, enum BattlerId *targets)
@@ -994,6 +999,15 @@ static void Cmd_waitforvisualfinish(void)
     {
         sBattleAnimScriptPtr++;
         sAnimFramesToWait = 0;
+
+        // Assets can be safely unloaded at the end of waitforvisualfinish
+        // since it's guaranteed that nothing is currently using the assets
+        // by definition here.
+        // Only palettes are unloaded since that's what's usually hitting limits
+        // and is very quick to load again if needed.
+        // Unloading tile allocation was tested, but that did measurably increase
+        // the time it took to run animation tests
+        UnloadAllSpritePalettes();
     }
     else
     {
