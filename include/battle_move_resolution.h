@@ -3,7 +3,7 @@
 
 #include "constants/battle_move_resolution.h"
 
-bool32 DoMoveEnd(enum MoveEndState endMode, enum MoveEndState endState);
-void MoveValuesCleanUp(void);
+enum CancelerResult DoAttackCanceler(void);
+enum MoveEndResult DoMoveEnd(enum MoveEndState endMode, enum MoveEndState endState);
 
 #endif // GUARD_BATTLE_MOVE_RESOLUTION_H

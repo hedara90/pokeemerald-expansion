@@ -4,18 +4,17 @@
 
 AI_SINGLE_BATTLE_TEST("AI will not further increase Attack / Sp. Atk stat if it knows it faints to target: AI faster")
 {
-    u16 move;
+    enum Move move;
 
     PARAMETRIZE { move = MOVE_HOWL; }
     PARAMETRIZE { move = MOVE_CALM_MIND; }
 
     GIVEN {
         ASSUME(GetMovePower(MOVE_SKY_UPPERCUT) == 85);
-        ASSUME(GetMoveEffect(MOVE_HOWL) == EFFECT_ATTACK_UP
-            || GetMoveEffect(MOVE_HOWL) == EFFECT_ATTACK_UP_USER_ALLY);
+        ASSUME(GetMoveEffect(MOVE_HOWL) == EFFECT_ATTACK_UP);
         ASSUME(GetMoveEffect(MOVE_CALM_MIND) == EFFECT_CALM_MIND);
         AI_FLAGS(AI_FLAG_CHECK_BAD_MOVE | AI_FLAG_CHECK_VIABILITY | AI_FLAG_TRY_TO_FAINT);
-        PLAYER(SPECIES_COMBUSKEN) { Speed(15); Moves(MOVE_SKY_UPPERCUT, MOVE_CELEBRATE); };
+        PLAYER(SPECIES_COMBUSKEN) { Speed(15); Moves(MOVE_SKY_UPPERCUT, MOVE_CELEBRATE); }
         OPPONENT(SPECIES_KANGASKHAN) { Speed(20); Moves(MOVE_CHIP_AWAY, MOVE_SWIFT, move); }
     } WHEN {
         TURN { MOVE(player, MOVE_SKY_UPPERCUT); EXPECT_MOVE(opponent, move); }
@@ -25,18 +24,17 @@ AI_SINGLE_BATTLE_TEST("AI will not further increase Attack / Sp. Atk stat if it 
 
 AI_SINGLE_BATTLE_TEST("AI will not further increase Attack / Sp. Atk stat if it knows it faints to target: AI slower")
 {
-    u16 move;
+    enum Move move;
 
     PARAMETRIZE { move = MOVE_HOWL; }
     PARAMETRIZE { move = MOVE_CALM_MIND; }
 
     GIVEN {
         ASSUME(GetMovePower(MOVE_SKY_UPPERCUT) == 85);
-        ASSUME(GetMoveEffect(MOVE_HOWL) == EFFECT_ATTACK_UP
-            || GetMoveEffect(MOVE_HOWL) == EFFECT_ATTACK_UP_USER_ALLY);
+        ASSUME(GetMoveEffect(MOVE_HOWL) == EFFECT_ATTACK_UP);
         ASSUME(GetMoveEffect(MOVE_CALM_MIND) == EFFECT_CALM_MIND);
         AI_FLAGS(AI_FLAG_CHECK_BAD_MOVE | AI_FLAG_CHECK_VIABILITY | AI_FLAG_TRY_TO_FAINT);
-        PLAYER(SPECIES_COMBUSKEN) { Speed(20); Moves(MOVE_DOUBLE_KICK, MOVE_CELEBRATE); };
+        PLAYER(SPECIES_COMBUSKEN) { Speed(20); Moves(MOVE_DOUBLE_KICK, MOVE_CELEBRATE); }
         OPPONENT(SPECIES_KANGASKHAN) { Speed(15); Moves(MOVE_CHIP_AWAY, MOVE_SWIFT, move); }
     } WHEN {
         TURN { MOVE(player, MOVE_DOUBLE_KICK); EXPECT_MOVE(opponent, move); }
@@ -48,7 +46,7 @@ AI_SINGLE_BATTLE_TEST("AI will increase speed if it is slower")
 {
     GIVEN {
         AI_FLAGS(AI_FLAG_CHECK_BAD_MOVE | AI_FLAG_CHECK_VIABILITY | AI_FLAG_TRY_TO_FAINT);
-        PLAYER(SPECIES_COMBUSKEN) { Speed(20); Moves(MOVE_DOUBLE_KICK, MOVE_CELEBRATE); };
+        PLAYER(SPECIES_COMBUSKEN) { Speed(20); Moves(MOVE_DOUBLE_KICK, MOVE_CELEBRATE); }
         OPPONENT(SPECIES_KANGASKHAN) { Speed(15); Moves(MOVE_CHIP_AWAY, MOVE_AGILITY); }
     } WHEN {
         TURN { MOVE(player, MOVE_DOUBLE_KICK); EXPECT_MOVE(opponent, MOVE_AGILITY); }
@@ -58,18 +56,17 @@ AI_SINGLE_BATTLE_TEST("AI will increase speed if it is slower")
 
 AI_SINGLE_BATTLE_TEST("AI will not waste a turn setting up if it knows target can faint it")
 {
-    u16 move;
+    enum Move move;
 
     PARAMETRIZE { move = MOVE_HOWL; }
     PARAMETRIZE { move = MOVE_CALM_MIND; }
 
     GIVEN {
         ASSUME(GetMovePower(MOVE_SKY_UPPERCUT) == 85);
-        ASSUME(GetMoveEffect(MOVE_HOWL) == EFFECT_ATTACK_UP
-            || GetMoveEffect(MOVE_HOWL) == EFFECT_ATTACK_UP_USER_ALLY);
+        ASSUME(GetMoveEffect(MOVE_HOWL) == EFFECT_ATTACK_UP);
         ASSUME(GetMoveEffect(MOVE_CALM_MIND) == EFFECT_CALM_MIND);
         AI_FLAGS(AI_FLAG_CHECK_BAD_MOVE | AI_FLAG_CHECK_VIABILITY | AI_FLAG_TRY_TO_FAINT | AI_FLAG_OMNISCIENT);
-        PLAYER(SPECIES_COMBUSKEN) { Speed(15); Moves(MOVE_SKY_UPPERCUT, MOVE_DOUBLE_KICK, MOVE_FLAME_WHEEL, MOVE_CELEBRATE); };
+        PLAYER(SPECIES_COMBUSKEN) { Speed(15); Moves(MOVE_SKY_UPPERCUT, MOVE_DOUBLE_KICK, MOVE_FLAME_WHEEL, MOVE_CELEBRATE); }
         OPPONENT(SPECIES_KANGASKHAN) { Speed(20); Moves(MOVE_CHIP_AWAY, MOVE_SWIFT, move); }
     } WHEN {
         TURN { MOVE(player, MOVE_DOUBLE_KICK); EXPECT_MOVE(opponent, move); }
@@ -86,12 +83,12 @@ AI_SINGLE_BATTLE_TEST("AI will not use Throat Chop if opposing mon has a better 
         ASSUME(GetMovePower(MOVE_FLAME_BURST) == 70);
         ASSUME(MoveHasAdditionalEffect(MOVE_THROAT_CHOP, MOVE_EFFECT_THROAT_CHOP) == TRUE);
         AI_FLAGS(AI_FLAG_CHECK_BAD_MOVE | AI_FLAG_CHECK_VIABILITY | AI_FLAG_TRY_TO_FAINT);
-        PLAYER(SPECIES_REGIROCK) { Speed(15); Moves(MOVE_DISARMING_VOICE, MOVE_FLAME_BURST); };
+        PLAYER(SPECIES_REGIROCK) { Speed(15); Moves(MOVE_DISARMING_VOICE, MOVE_FLAME_BURST); }
         OPPONENT(SPECIES_WOBBUFFET) { Speed(20); Moves(MOVE_THROAT_CHOP, MOVE_PSYCHIC_FANGS); }
     } WHEN {
         TURN { EXPECT_MOVE(opponent, MOVE_PSYCHIC_FANGS); MOVE(player, MOVE_FLAME_BURST); }
         TURN { EXPECT_MOVE(opponent, MOVE_PSYCHIC_FANGS); MOVE(player, MOVE_DISARMING_VOICE); }
-        TURN { EXPECT_MOVE(opponent, MOVE_PSYCHIC_FANGS); MOVE(player, MOVE_FLAME_BURST);}
+        TURN { EXPECT_MOVE(opponent, MOVE_PSYCHIC_FANGS); MOVE(player, MOVE_FLAME_BURST); }
     }
 }
 
@@ -104,12 +101,12 @@ AI_SINGLE_BATTLE_TEST("AI will select Throat Chop if the sound move is the best 
         ASSUME(GetMovePower(MOVE_FLAME_BURST) == 70);
         ASSUME(GetMovePower(MOVE_HYPER_VOICE) == 90);
         AI_FLAGS(AI_FLAG_CHECK_BAD_MOVE | AI_FLAG_CHECK_VIABILITY | AI_FLAG_TRY_TO_FAINT);
-        PLAYER(SPECIES_REGIROCK) { Speed(15); Moves(MOVE_HYPER_VOICE, MOVE_FLAME_BURST); };
+        PLAYER(SPECIES_REGIROCK) { Speed(15); Moves(MOVE_HYPER_VOICE, MOVE_FLAME_BURST); }
         OPPONENT(SPECIES_WOBBUFFET) { Speed(20); Moves(MOVE_THROAT_CHOP, MOVE_PSYCHIC_FANGS); }
     } WHEN {
         TURN { EXPECT_MOVE(opponent, MOVE_PSYCHIC_FANGS); MOVE(player, MOVE_FLAME_BURST); }
         TURN { EXPECT_MOVE(opponent, MOVE_PSYCHIC_FANGS); MOVE(player, MOVE_HYPER_VOICE); }
-        TURN { EXPECT_MOVE(opponent, MOVE_THROAT_CHOP); MOVE(player, MOVE_HYPER_VOICE);}
+        TURN { EXPECT_MOVE(opponent, MOVE_THROAT_CHOP); MOVE(player, MOVE_HYPER_VOICE); }
     }
 }
 
@@ -148,7 +145,7 @@ AI_SINGLE_BATTLE_TEST("AI will incentivise multiple best damage moves in cases o
 
 AI_SINGLE_BATTLE_TEST("Clangorous Soul - gets best move boost when player does under 67 pct damage")
 {
-    u16 move;
+    enum Move move;
     PARAMETRIZE { move = MOVE_SOLAR_BEAM; }
     PARAMETRIZE { move = MOVE_AIR_SLASH; }
     ASSUME(GetMovePower(MOVE_SOLAR_BEAM) == 120);
@@ -240,7 +237,7 @@ AI_SINGLE_BATTLE_TEST("Belly Drum - physical move >50pct damage vs ice face alre
 
 AI_SINGLE_BATTLE_TEST("HasMoveThatChangesKOThreshold - AI should not see self-targeted speed drops as preventing setup moves in 2hko cases")
 {
-    u16 move;
+    enum Move move;
     PARAMETRIZE { move = MOVE_EARTHQUAKE; }
     PARAMETRIZE { move = MOVE_BULLDOZE; }
     GIVEN {
@@ -274,7 +271,7 @@ AI_SINGLE_BATTLE_TEST("AI_IsMoveEffectInPlus - AI should not see secondary effec
 
 AI_SINGLE_BATTLE_TEST("Fillet Away AI handling")
 {
-    u16 move;
+    enum Move move;
     PARAMETRIZE { move = MOVE_SCALD; }
     PARAMETRIZE { move = MOVE_THUNDERBOLT; }
     ASSUME(GetMovePower(MOVE_THUNDERBOLT) == (B_UPDATED_MOVE_DATA >= GEN_6 ? 90 : 95));
@@ -286,5 +283,26 @@ AI_SINGLE_BATTLE_TEST("Fillet Away AI handling")
         OPPONENT(SPECIES_VELUZA){ Level(100); Nature(NATURE_ADAMANT); Ability(ABILITY_SHARPNESS); Speed(176); Moves(MOVE_FILLET_AWAY, MOVE_AQUA_CUTTER); }
     } WHEN {
         TURN { MOVE(player, move); EXPECT_MOVE(opponent, move == MOVE_SCALD ? MOVE_FILLET_AWAY : MOVE_AQUA_CUTTER); }
+    }
+}
+
+AI_SINGLE_BATTLE_TEST("Retaliate sees damage correctly on the field")
+{
+    GIVEN {
+        AI_FLAGS(AI_FLAG_CHECK_BAD_MOVE | AI_FLAG_TRY_TO_FAINT | AI_FLAG_CHECK_VIABILITY | AI_FLAG_SMART_SWITCHING | AI_FLAG_SMART_MON_CHOICES | AI_FLAG_OMNISCIENT);
+        PLAYER(SPECIES_WOBBUFFET) { Level(50); HP(100); Nature(NATURE_QUIRKY); Ability(ABILITY_TELEPATHY); Speed(58); Moves(MOVE_TACKLE); }
+        OPPONENT(SPECIES_RATTATA){ Level(1); HP(1); Nature(NATURE_QUIRKY); Speed(1); Moves(MOVE_TACKLE);}
+        OPPONENT(SPECIES_KANGASKHAN) { Level(50); Nature(NATURE_QUIRKY); Ability(ABILITY_INNER_FOCUS); Speed(251); Moves(MOVE_RETALIATE, MOVE_SLASH); }
+    } WHEN {
+        TURN {
+            MOVE(player, MOVE_TACKLE);
+            EXPECT_MOVE(opponent, MOVE_TACKLE);
+            EXPECT_SEND_OUT(opponent, 1);
+        }
+        TURN {
+            MOVE(player, MOVE_TACKLE);
+            SCORE_EQ_VAL(opponent, MOVE_RETALIATE,      (AI_SCORE_DEFAULT + BEST_DAMAGE_MOVE + FAST_KILL));
+            SCORE_EQ_VAL(opponent, MOVE_SLASH,      (AI_SCORE_DEFAULT));
+        }
     }
 }
