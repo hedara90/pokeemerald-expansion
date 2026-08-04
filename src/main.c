@@ -133,6 +133,7 @@ void AgbMain(void)
     gAgbMainLoop_sp = __builtin_frame_address(0);
 
     //  Do init check
+    /*
     if (gIsMyBoy == 1)
     {
         gIsMyBoy = 0;
@@ -144,6 +145,7 @@ void AgbMain(void)
         sTestThing = 23478 / sTestThing;
     }
     gIsMyBoy = !gIsMyBoy;
+    */
 
     AgbMainLoop();
 }
@@ -483,4 +485,21 @@ void DoSoftReset(void)
 void ClearPokemonCrySongs(void)
 {
     CpuFill16(0, gPokemonCrySongs, MAX_POKEMON_CRIES * sizeof(struct PokemonCrySong));
+}
+
+void SetValue(void)
+{
+    u32 value = Random32();
+    DebugPrintf("Setting value %u to persistent variable", value);
+    gIsMyBoy = value;
+}
+
+void PrintReset(void)
+{
+    DebugPrintf("Doing soft reset");
+}
+
+void CheckValue(void)
+{
+    DebugPrintf("Value of persistent variable is: %u", gIsMyBoy);
 }
